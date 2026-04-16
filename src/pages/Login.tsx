@@ -3,7 +3,7 @@ import { login } from "../services/auth.service";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import AuthLayout from "../layouts/AuthLayout";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -13,8 +13,11 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
+    const location = useLocation();
+    const successMsg = location.state?.successMessage;
 
-    const handleLogin = async () => {
+    const handleLogin = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         setError("");
 
         if (!email || !password) {
@@ -25,15 +28,21 @@ export default function Login() {
 
             const res = await login ({ email, password });
 
-            if (remember) {
-                localStorage.setItem("token", res.token);
-            } else {
-                sessionStorage.setItem("token", res.token);
-            }
+            const storage = remember ? localStorage : sessionStorage;
+            storage.setItem("token", res.token);
 
-            navigate("/dashboard");
+            if (res.user?.is_first_login) {
+                navigate("/update-credentials", {
+                    state: {
+                        currentEmail: email,
+                        currentPassword: password
+                    }
+                });
+            } else {
+                navigate("/dashboard");
+            }
         } catch (err: any) {
-            setError(err.response?.data?.message || "Login Gagal");
+            setError(err.response?.data?.message || "Login Gaga. lPeriksa kembali email dan password Anda.");
         } finally {
             setLoading(false);
         }
@@ -41,50 +50,63 @@ export default function Login() {
 
     return (
         <AuthLayout>
-            <h1 className="text-2xl font-bold mb-6 text-center">Log in to your account</h1>
-
-            {error && (
-                <p className="text-red-500 text-sm mb-3">{error}</p>
+            {successMsg && (
+                <div className="bg-green-500 text-white p-3 rounded-md mb-4 text-sm flex items-center gap-2">
+                    <span>check_circle</span>
+                    {successMsg}
+                </div>
             )}
 
-            <div className="mb-4">
-                <label className="text-sm">Username</label>
-                <Input 
-                    placeholder = "Username"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                />
+            <div className="mb-8"> 
+                <h1 className="text-[30px] font-bold text-[#1F2937] mb-2 text-center leading-tight">Log in to your account</h1>
+                <p className="text-[#6B7280] text-sm text-center">Please enter your details</p>
             </div>
 
-            <div className="mb-4">
-                <label className="text-sm">Password</label>
-                <Input
-                    placeholder="Password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
-            </div>
+            {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-md text-xs mb-4 text-center border border-red-100">
+                    {error}
+                </div>
+            )}
 
-            <div className="flex justify-between items-center mb-4 text-sm">
-                <label className="flex items-center gap-2">
-                    <input 
-                        type="checkbox"
-                        checked={remember}
-                        onChange={(e) => setRemember(e.target.checked)}
+            <form onSubmit={handleLogin} className="space-y-5">
+                <div>
+                    <label className="text-xs font-bold text-[#374151] mb-2 block uppercase tracking-wide">
+                        USERNAME
+                    </label>
+                    <Input 
+                        placeholder = "Username"
+                        value={email}
+                        onChange={(e) => setEmail (e.target.value)}
+                        required
                     />
-                    <span>Ingat Saya</span>
-                </label>
-                <a 
-                    href="/reset-password"
-                    className="text-blue-600 underline"
-                    >Lupa Password
-                </a>
-            </div>
+                </div>
 
-            <Button onClick={handleLogin} disabled={loading}>
-                {loading ? "Loading..." : "Login"}
-            </Button>
+                <div>
+                    <label className="text-xs font-bold text-[#374151] mb-1.5 block uppercase tracking-wide">PASSWORD</label>
+                    <Input
+                        placeholder="Password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
+                </div>
+
+                <div className="pt-2">
+                    <Button>
+                        {loading ? "Logging in..." : "Login"}
+                    </Button>
+                </div>
+
+                <div className="text-center">
+                    <a
+                        href="/reset-password"
+                        className="text-[#2563EB] text-sm font-medium hover:underline"
+                    >
+                        Forgot Your Password
+                    </a>
+                </div>
+            </form>
         </AuthLayout>
     )
 }
