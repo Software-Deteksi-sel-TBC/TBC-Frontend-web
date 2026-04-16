@@ -59,14 +59,6 @@ export default function ResetPassword() {
                 <Input type="password" />
             </div>
 
-            {/* <Input 
-                 placeholder="Confirm Password"
-                type="password"
-                className="mt-3"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-            /> */}
-
             <div className="mb-6">
                 <label className="text-sm">Confirm Password</label>
                 <Input type="password" />

@@ -41,7 +41,7 @@ export default function Login() {
 
     return (
         <AuthLayout>
-            <h1 className="text-2xl font-bold mb-6 text-center">TBcan</h1>
+            <h1 className="text-2xl font-bold mb-6 text-center">Log in to your account</h1>
 
             {error && (
                 <p className="text-red-500 text-sm mb-3">{error}</p>
