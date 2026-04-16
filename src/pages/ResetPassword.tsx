@@ -7,7 +7,7 @@ import AuthLayout from "../layouts/AuthLayout";
 
 export default function ResetPassword() {
     const [params] = useSearchParams();
-    const token = params.get("token");
+    const token = params.get("token"); // Ini nanti mengambil token dari URL
 
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
@@ -40,9 +40,11 @@ export default function ResetPassword() {
                 newPassword: password
             });
 
-            navigate("/reset-success");
+            navigate("/login", { state: { success: "Password updated. Please log in with your new credentials." } });
         } catch (err: any) {
-            alert(err.response?.data?.message || "Error reset password");
+            setError(err.response?.data?.message || "Gagal memperbarui password");
+        } finally {
+            setLoading(false);
         }
     };
 

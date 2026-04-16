@@ -2,7 +2,7 @@ import bg from "../assets/Background.png"
 
 export default function AuthLayout({ children }: any) {
   return (
-    <div className="min-h-screen flex items-center justify-center"
+    <div className="min-h-screen flex items-center justify-center px-4 py-12  "
     style={{
       backgroundImage: `url(${bg})`,
       backgroundSize: "cover",
@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: any) {
       backgroundRepeat: "no-repeat",
       }}
     >
-      <div className="bg-white p-8 rounded-xl shadow-md w-[400px]">
+      <div className="bg-white p-8 rounded-xl shadow-md w-[500px]">
         {children}
       </div>
     </div>
