@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { login } from "../services/auth.service";
-import Input from "../components/ui/Input";
-import Button from "../components/ui/Button";
-import AuthLayout from "../layouts/AuthLayout";
+import axios from "axios";
+import { login } from "../../features/auth/services/auth.service";
+import Input from "../../components/ui/Input";
+import Button from "../../components/ui/Button";
+import AuthLayout from "../../layouts/AuthLayout";
 import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [remember, setRemember] = useState(false);
+    const [remember] = useState(false);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -26,7 +27,7 @@ export default function Login() {
         try {
             setLoading(true);
 
-            const res = await login ({ email, password });
+            const res = await login({ email, password });
 
             const storage = remember ? localStorage : sessionStorage;
             storage.setItem("token", res.token);
@@ -35,14 +36,31 @@ export default function Login() {
                 navigate("/update-credentials", {
                     state: {
                         currentEmail: email,
-                        currentPassword: password
-                    }
+                        currentPassword: password,
+                    },
                 });
             } else {
                 navigate("/dashboard");
             }
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Login Gaga. lPeriksa kembali email dan password Anda.");
+        } catch (err: unknown) {
+            const fallbackMessage =
+                "Login Gagal. Periksa kembali email dan password Anda.";
+
+            if (!axios.isAxiosError(err)) {
+                setError(fallbackMessage);
+                return;
+            }
+
+            const responseData = err.response?.data;
+            if (responseData && typeof responseData === "object") {
+                const message = (responseData as { message?: unknown }).message;
+                if (typeof message === "string" && message.length > 0) {
+                    setError(message);
+                    return;
+                }
+            }
+
+            setError(fallbackMessage);
         } finally {
             setLoading(false);
         }
@@ -57,9 +75,13 @@ export default function Login() {
                 </div>
             )}
 
-            <div className="mb-8"> 
-                <h1 className="text-[30px] font-bold text-[#1F2937] mb-2 text-center leading-tight">Log in to your account</h1>
-                <p className="text-[#6B7280] text-sm text-center">Please enter your details</p>
+            <div className="mb-8">
+                <h1 className="text-[30px] font-bold text-[#1F2937] mb-2 text-center leading-tight">
+                    Log in to your account
+                </h1>
+                <p className="text-[#6B7280] text-sm text-center">
+                    Please enter your details
+                </p>
             </div>
 
             {error && (
@@ -73,16 +95,18 @@ export default function Login() {
                     <label className="text-xs font-bold text-[#374151] mb-2 block uppercase tracking-wide">
                         USERNAME
                     </label>
-                    <Input 
-                        placeholder = "Username"
+                    <Input
+                        placeholder="Username"
                         value={email}
-                        onChange={(e) => setEmail (e.target.value)}
+                        onChange={(e) => setEmail(e.target.value)}
                         required
                     />
                 </div>
 
                 <div>
-                    <label className="text-xs font-bold text-[#374151] mb-1.5 block uppercase tracking-wide">PASSWORD</label>
+                    <label className="text-xs font-bold text-[#374151] mb-1.5 block uppercase tracking-wide">
+                        PASSWORD
+                    </label>
                     <Input
                         placeholder="Password"
                         type="password"
@@ -93,9 +117,7 @@ export default function Login() {
                 </div>
 
                 <div className="pt-2">
-                    <Button>
-                        {loading ? "Logging in..." : "Login"}
-                    </Button>
+                    <Button>{loading ? "Logging in..." : "Login"}</Button>
                 </div>
 
                 <div className="text-center">
@@ -108,5 +130,5 @@ export default function Login() {
                 </div>
             </form>
         </AuthLayout>
-    )
+    );
 }

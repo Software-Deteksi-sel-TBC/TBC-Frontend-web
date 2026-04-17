@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import Button from "../components/ui/Button";
-import AuthLayout from "../layouts/AuthLayout";
+import Button from "../../components/ui/Button";
+import AuthLayout from "../../layouts/AuthLayout";
 
 export default function ResetSuccess() {
   const navigate = useNavigate();
