@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "../pages/Login";
-import ResetPassword from "../pages/ResetPassword";
-import ResetSuccess from "../pages/ResetSuccess";
-import UpdateCredentials from "../pages/UpdateCredentials";
+import Login from "../pages/auth/Login";
+import ResetPassword from "../pages/auth/ResetPassword";
+import ResetSuccess from "../pages/auth/ResetSuccess";
+import UpdateCredentials from "../pages/auth/UpdateCredentials";
 
 export default function AppRoutes() {
   return (
