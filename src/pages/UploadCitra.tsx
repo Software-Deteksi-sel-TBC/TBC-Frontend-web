@@ -1,4 +1,4 @@
-import { useState, useRef, ChangeEvent, DragEvent, use } from "react";
+import { useState, useRef, type ChangeEvent, type DragEvent } from "react";
 import AuthLayout from "../layouts/AuthLayout";
 import { Upload, Search, LogOut, User, ZoomIn, ZoomOut } from "lucide-react";
 
@@ -52,13 +52,12 @@ export default function UploadCitra() {
     const onDrop = (e: DragEvent) => {
         e.preventDefault();
         setIsDragging(false);
-        id(e.dataTransfer.files && e.dataTransfer.files[0]) {
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             processFile(e.dataTransfer.files[0]);
         }
     };
 
-    const handleFileChange = (e: ChangeEvent<HTMLInputElement>)
-        => {
+    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             processFile(e.target.files[0]);
         }
@@ -121,7 +120,7 @@ export default function UploadCitra() {
                                 ) : (
                                     <div className="w-full h-full p-6 flex flex-col">
                                         <img
-                                            src={previewUrl}
+                                            src={previewUrl ?? undefined}
                                             className="w-full h-full object-contain rounded-xl"
                                             alt="Uploaded Cell"
                                         />
