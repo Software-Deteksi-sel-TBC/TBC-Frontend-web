@@ -1,11 +1,7 @@
-// src/App.tsx
-import AppRoutes from "./routes"; // Import tanpa kurung kurawal karena 'export default'
+import AppRoutes from "./routes";
 
 function App() {
-  // Panggil AppRoutes sebagai komponen biasa, bukan RouterProvider
-  return (
-    <AppRoutes />
-  );
+  return <AppRoutes />;
 }
 
 export default App;
