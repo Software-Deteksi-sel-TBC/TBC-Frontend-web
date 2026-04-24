@@ -4,6 +4,7 @@ import ResetPasswordEmail from "../pages/auth/ResetPasswordEmail";
 import ResetPassword from "../pages/auth/ResetPassword";
 import ResetSuccess from "../pages/auth/ResetSuccess";
 import UpdateCredentials from "../pages/auth/UpdateCredentials";
+import UploadCitra from "../pages/UploadCitra";
 
 export default function AppRoutes() {
   return (
@@ -15,6 +16,7 @@ export default function AppRoutes() {
         <Route path="/reset-success" element={<ResetSuccess />} />
         <Route path="/update-credentials" element={<UpdateCredentials />} />
         <Route path="/reset-password-email" element={<ResetPasswordEmail />} />
+        <Route path="/upload" element={<UploadCitra />} />
       </Routes>
     </BrowserRouter>
   );

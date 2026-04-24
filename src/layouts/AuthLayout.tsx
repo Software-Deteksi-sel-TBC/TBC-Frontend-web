@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       backgroundRepeat: "no-repeat",
       }}
     >
-      <div className="bg-white p-8 rounded-xl shadow-md w-[500px]">
+      <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-fit">
         {children}
       </div>
     </div>
