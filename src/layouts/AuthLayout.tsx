@@ -3,15 +3,16 @@ import bg from "../assets/Background.png";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12  "
-    style={{
-      backgroundImage: `url(${bg})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      backgroundRepeat: "no-repeat",
+    <div
+      className="min-h-[100vh] flex items-start justify-center px-4 py-12"
+      style={{
+        backgroundImage: `url(${bg})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
       }}
     >
-      <div className="bg-white p-8 rounded-xl shadow-md w-[500px]">
+      <div className="bg-white w-full max-w-md rounded-xl shadow-md p-6 md:p-8 pb-8">
         {children}
       </div>
     </div>
