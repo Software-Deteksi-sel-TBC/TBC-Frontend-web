@@ -67,9 +67,9 @@ export default function ResetPassword() {
 
     return (
         <AuthLayout>
-            <h1 className="text-2xl font-bold mb-6 text-center">Reset Password</h1>
+            <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center">Reset Password</h1>
 
-            {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+            {error && <p className="text-red-500 text-xs md:text-sm mb-2 md:mb-3">{error}</p>}
 
             <form
                 onSubmit={(e) => {
@@ -78,7 +78,9 @@ export default function ResetPassword() {
                 }}
             >
                 <div className="mb-4">
-                    <label className="text-sm">New Password</label>
+                    <label className="text-xs md:text-sm font-medium">
+                        New Password
+                    </label>
                     <Input
                         type="password"
                         value={password}
@@ -87,7 +89,9 @@ export default function ResetPassword() {
                 </div>
 
                 <div className="mb-6">
-                    <label className="text-sm">Confirm Password</label>
+                    <label className="text-xs md:text-sm font-medium">
+                        Confirm Password
+                    </label>
                     <Input
                         type="password"
                         value={confirm}
@@ -95,7 +99,11 @@ export default function ResetPassword() {
                     />
                 </div>
 
-                <Button type="submit" disabled={loading}>
+                <Button
+                    type="submit"
+                    disabled={loading}
+                    className="py-2.5 md:py-3 text-sm md:text-base"
+                >
                     Submit
                 </Button>
             </form>

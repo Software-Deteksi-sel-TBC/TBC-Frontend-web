@@ -75,24 +75,24 @@ export default function Login() {
                 </div>
             )}
 
-            <div className="mb-8">
-                <h1 className="text-[30px] font-bold text-[#1F2937] mb-2 text-center leading-tight">
+            <div className="mb-6 md:mb-8">
+                <h1 className="text-2xl md:text-[30px] font-bold text-[#1F2937] mb-1 md:mb-2 text-center leading-tight">
                     Log in to your account
                 </h1>
-                <p className="text-[#6B7280] text-sm text-center">
+                <p className="text-sm text-[#6B7280] text-center">
                     Please enter your details
                 </p>
             </div>
 
             {error && (
-                <div className="bg-red-50 text-red-600 p-3 rounded-md text-xs mb-4 text-center border border-red-100">
+                <div className="bg-red-50 text-red-600 p-2 md:p-3 rounded-md text-xs mb-3 md:mb-4 text-center border border-red-100">
                     {error}
                 </div>
             )}
 
             <form onSubmit={handleLogin} className="space-y-5">
                 <div>
-                    <label className="text-xs font-bold text-[#374151] mb-2 block uppercase tracking-wide">
+                    <label className="text-[11px] md:text-xs font-bold text-[#374151] mb-1 md:mb-2 block uppercase tracking-wide">
                         USERNAME
                     </label>
                     <Input
@@ -104,7 +104,7 @@ export default function Login() {
                 </div>
 
                 <div>
-                    <label className="text-xs font-bold text-[#374151] mb-1.5 block uppercase tracking-wide">
+                    <label className="text-[11px] md:text-xs font-bold text-[#374151] mb-1 md:mb-1.5 block uppercase tracking-wide">
                         PASSWORD
                     </label>
                     <Input
@@ -117,13 +117,13 @@ export default function Login() {
                 </div>
 
                 <div className="pt-2">
-                    <Button>{loading ? "Logging in..." : "Login"}</Button>
+                    <Button className="py-2.5 md:py-3 text-sm md:text-base">{loading ? "Logging in..." : "Login"}</Button>
                 </div>
 
                 <div className="text-center">
                     <a
-                        href="/reset-password"
-                        className="text-[#2563EB] text-sm font-medium hover:underline"
+                        href="/reset-password-email"
+                        className="text-[#2563EB] text-xs md:text-sm font-medium hover:underline"
                     >
                         Forgot Your Password
                     </a>

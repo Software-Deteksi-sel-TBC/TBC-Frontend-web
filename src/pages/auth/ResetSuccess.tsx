@@ -7,15 +7,18 @@ export default function ResetSuccess() {
 
   return (
     <AuthLayout>
-      <h1 className="text-xl font-bold mb-4">
+      <h1 className="text-lg md:text-xl font-bold mb-3 md:mb-4">
         Reset Password Berhasil!
       </h1>
 
-      <p className="text-sm mb-4">
+      <p className="text-xs md:text-sm mb-4">
         Anda telah berhasil mengubah password Anda.
       </p>
 
-      <Button onClick={() => navigate("/")}>
+      <Button
+        onClick={() => navigate("/")}
+        className="py-2.5 md:py-3 text-sm md:text-base"
+      >
         OK
       </Button>
     </AuthLayout>

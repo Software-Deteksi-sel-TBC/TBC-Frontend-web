@@ -1,41 +1,73 @@
 import { Link } from "react-router-dom";
 import { useState, type FormEvent } from "react";
+import axios from "axios";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import AuthLayout from "../../layouts/AuthLayout";
+import { requestResetPassword } from "../../features/auth/services/auth.service";
 
 export default function ResetPasswordEmail() {
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState("");
+    const [error, setError] = useState("");
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        setMessage("");
+        setError("");
         setLoading(true);
 
-        try{
-            console.log("Mengirim link reset ke:", email)
+        try {
+            await requestResetPassword({ email });
+            setMessage("Link reset password telah dikirim ke email Anda. Silahkan cek inbox Anda.");
+            setEmail("");
+        } catch (err: unknown) {
+            const fallbackMessage = "Gagal mengirim email reset password.";
 
-            setTimeout(() => {
-                setLoading(false);
-                alert("Link reset password telah dikirim ke email Anda. Silahkan cek inbox Anda.");
-            }, 1500);
-        } catch (error) {
+            if (!axios.isAxiosError(err)) {
+                setError(fallbackMessage);
+                return;
+            }
+
+            const responseData = err.response?.data;
+            if (responseData && typeof responseData === "object") {
+                const apiMessage = (responseData as { message?: unknown }).message;
+                if (typeof apiMessage === "string" && apiMessage.length > 0) {
+                    setError(apiMessage);
+                    return;
+                }
+            }
+
+            setError(fallbackMessage);
+        } finally {
             setLoading(false);
-            console.error("Gagal mengirim email reset:", error);
         }
     };
 
     return (
         <AuthLayout>
             <div>
-                <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-gray-800">Forgot Password</h2>
-                    <p className="text-sm text-gray-500 mt-2">Enter your email address.</p>
+                <div className="text-center mb-6 md:mb-8">
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-800">Forgot Password</h2>
+                    <p className="text-sm text-gray-500 mt-1 md:mt-2">Enter your email address.</p>
                 </div>
+
+                {message && (
+                    <div className="mb-3 md:mb-4 rounded-md border border-green-200 bg-green-50 p-2.5 md:p-3 text-xs md:text-sm text-green-700">
+                        {message}
+                    </div>
+                )}
+
+                {error && (
+                    <div className="mb-3 md:mb-4 rounded-md border border-red-200 bg-red-50 p-2.5 md:p-3 text-xs md:text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                        <label className="text-xs font-bold text-[#374151] mb-2 block uppercase tracking-wide">
+                        <label className="text-[11px] md:text-xs font-bold text-[#374151] mb-1 md:mb-2 block uppercase tracking-wide">
                             Email
                         </label>
                         <div className="relative">
@@ -58,15 +90,15 @@ export default function ResetPasswordEmail() {
                         </div>
                     </div>
 
-                    <div className="space-y-4">
-                        <Button type="submit" disabled={loading}>
+                    <div className="space-y-3 md:space-y-4">
+                        <Button type="submit" disabled={loading} className="py-2.5 md:py-3 text-sm md:text-base">
                             {loading ? "Sending..." : "Continue"}
                         </Button>
 
                         <div className="text-center">
                             <Link
                                 to="/login"
-                                className="text-sm font-semibold text-[#0061D1] hover:underline"
+                                className="text-xs md:text-sm font-semibold text-[#0061D1] hover:underline"
                             >
                                 Back to Login
                             </Link>
