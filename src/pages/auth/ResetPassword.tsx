@@ -66,7 +66,7 @@ export default function ResetPassword() {
     };
 
     return (
-        <AuthLayout>
+        <AuthLayout verticalAlign="center">
             <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center">Reset Password</h1>
 
             {error && <p className="text-red-500 text-xs md:text-sm mb-2 md:mb-3">{error}</p>}

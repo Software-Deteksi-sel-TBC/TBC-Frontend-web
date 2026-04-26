@@ -67,7 +67,7 @@ export default function Login() {
     };
 
     return (
-        <AuthLayout>
+        <AuthLayout verticalAlign="center">
             {successMsg && (
                 <div className="bg-green-500 text-white p-3 rounded-md mb-4 text-sm flex items-center gap-2">
                     <span>check_circle</span>

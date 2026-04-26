@@ -34,7 +34,7 @@ export default function UpdateCredentials() {
     };
 
     return (
-        <AuthLayout>
+        <AuthLayout verticalAlign="top">
             <div className="mb-5 md:mb-6">
                 <h1 className="text-2xl md:text-[32px] font-bold text-[#1F2937] mb-2 leading-tight">
                     Update Your Credentials
@@ -54,7 +54,7 @@ export default function UpdateCredentials() {
                 </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6 pb-4">
                 <div>
                     <label className="text-[11px] md:text-xs font-bold text-[#374151] mb-1 md:mb-2 block uppercase tracking-wide">
                         Email

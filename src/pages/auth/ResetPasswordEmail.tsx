@@ -46,7 +46,7 @@ export default function ResetPasswordEmail() {
     };
 
     return (
-        <AuthLayout>
+        <AuthLayout verticalAlign="center">
             <div>
                 <div className="text-center mb-6 md:mb-8">
                     <h2 className="text-xl md:text-2xl font-bold text-gray-800">Forgot Password</h2>
