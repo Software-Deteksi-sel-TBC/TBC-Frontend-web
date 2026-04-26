@@ -6,7 +6,7 @@ export default function ResetSuccess() {
   const navigate = useNavigate();
 
   return (
-    <AuthLayout>
+    <AuthLayout verticalAlign="center">
       <h1 className="text-lg md:text-xl font-bold mb-3 md:mb-4">
         Reset Password Berhasil!
       </h1>

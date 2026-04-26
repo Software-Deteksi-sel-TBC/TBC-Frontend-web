@@ -1,1 +1,38 @@
 @import "tailwindcss";
+
+.auth-shell {
+  min-height: 100svh;
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+.auth-shell--center {
+  align-items: center;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 28rem;
+  background: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  padding: 20px;
+}
+
+@media (min-width: 768px) {
+  .auth-shell {
+    align-items: center;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .auth-card {
+    padding: 32px;
+  }
+}

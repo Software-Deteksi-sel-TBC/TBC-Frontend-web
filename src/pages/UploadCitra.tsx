@@ -1,7 +1,10 @@
 import { useState, useRef, type ChangeEvent, type DragEvent } from "react";
-import AuthLayout from "../layouts/AuthLayout";
 import { Upload, Search, LogOut, User, ZoomIn, ZoomOut } from "lucide-react";
+import bg from "../assets/Background.png";
 
+
+
+// Analysis Results with AI
 interface AnalysisResults {
     quality: "GOOD" | "POOR";
     necrosis: number;
@@ -13,25 +16,21 @@ export default function UploadCitra() {
     const [file, setFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [results, setResults] = useState<AnalysisResults | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // --- LOGIKA FUNGSI (Harus di atas return) ---
-
+    // Handle file selection logic
     const processFile = (selectedFile: File) => {
         const validTypes = ["image/png", "image/jpeg", "image/webp"];
         if (!validTypes.includes(selectedFile.type)) {
-            alert("Please upload a valid image (PNG, JPG, or WEBP)");
+            alert("Please upload a valid image (PNG, JPG, or WEBP");
             return;
         }
 
         setFile(selectedFile);
         setPreviewUrl(URL.createObjectURL(selectedFile));
-        setResults(null); // Reset hasil jika upload gambar baru
-        setLoading(true);
 
-        // Simulasi proses AI
+        // Simulate AI Processing delay
         setTimeout(() => {
             setResults({
                 quality: "GOOD",
@@ -39,8 +38,7 @@ export default function UploadCitra() {
                 granuloma: 81,
                 datiaLanghans: 28,
             });
-            setLoading(false);
-        }, 1500);
+        }, 1000);
     };
 
     const onDragOver = (e: DragEvent) => {
@@ -70,65 +68,68 @@ export default function UploadCitra() {
         setResults(null);
     };
 
-    // --- TAMPILAN (Hanya satu return) ---
     return (
-        <AuthLayout>
-            <div className="w-full max-w-6xl font-sans">
-                {/* Header Profile */}
-                <div className="flex justify-end items-center gap-6 mb-6">
+        <div
+            className="min-h-screen w-full px-3 py-4 md:px-6 md:py-8"
+            style={{
+                backgroundImage: `url(${bg})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+            }}
+        >
+            <div className="w-full max-w-6xl mx-auto font-sans">
+                {/* Top Navbar Simulation */}
+                <div className="flex justify-end items-center gap-4 mb-6">
                     <div className="text-right">
-                        <p className="text-[10px] uppercase font-bold text-slate-500">Authorized User</p>
+                        <p className="text-[10px] uppercase font-bold text-slate-400"> Authorized User</p>
                         <p className="font-bold text-[#0a3d62]">jo</p>
                     </div>
                     <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-slate-200">
                         <User size={20} className="text-slate-400" />
                     </div>
-                    <LogOut size={20} className="text-[#0a3d62] cursor-pointer hover:text-red-500 transition-colors" />
+                    <LogOut size={20} className="text-[#0a3d62] cursor-pointer" />
                 </div>
-
-                {/* Main Content Area */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10">
-                    <div className="flex justify-between items-start mb-8">
+                {/* Main Interface */}
+                <div className="w-full bg-white rounded-2xl border border-slate-300 shadow-sm p-5 md:p-10">
+                    <div className="flex justify-between items-start">
                         <div>
                             <h1 className="text-3xl font-bold text-[#0a3d62]">Image Analysis</h1>
-                            <p className="text-slate-500 mt-1">Upload and analyze images for quality control.</p>
+                            <p className="text-slate-500 mt-1">Upload and analyse images for quality control.</p>
                         </div>
-                        <div className="bg-[#eef5ff] text-[#0a3d62] px-9 py-2 rounded-full text-xs font-bold border border-blue-100 flex items-center gap-2">
-                            <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-                            SYSTEM ACTIVE
-                        </div>
+                        <div className="bg-[#eef5ff] text-[#0a3d62] px-6 py-2 rounded-full text-xs font-bold border border-blue-100">SYSTEM ACTIVE</div>
                     </div>
-
-                    <hr className="mb-10 border-slate-100" />
-
+                    <hr className="my-8 border-slate-100" />
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                        {/* LEFT: UPLOAD BOX */}
+                        {/* LEFT: DRAG & DROP ZONE */}
                         <div className="lg:col-span-7">
                             <div
                                 onDragOver={onDragOver}
                                 onDragLeave={onDragLeave}
                                 onDrop={onDrop}
                                 onClick={() => !file && fileInputRef.current?.click()}
-                                className={`relative border-2 border-dashed rounded-[2rem] h-[450px] w-[700px] transition-all flex flex-col items-center justify-center overflow-hidden 
-                                ${isDragging ? "border-blue-600 bg-blue-50 scale-[1.01]" : "border-blue-400 bg-transparent"}
-                                ${!file ? "cursor-pointer hover:bg-slate-50" : "cursor-default"}`}
+                                className={`relative border-2 border-dashed rounded-[2rem] h-[450px] transition-all flex flex-col items-center justify-center overflow-hidden 
+                            ${isDragging ? "border-blue-600 bg-blue-50 scale-[1.01]" : "border-blue-400 bg-transparent"}
+                            ${!file ? "cursor-pointer hover:bg-slate-50" : "cursor-default"}
+                            `}
                             >
-                                {/* LOGIKA: Jika tidak ada preview, tampilkan area drop */}
                                 {!previewUrl ? (
                                     <div className="text-center pointer-events-none">
                                         <div className="mb-4 inline-block p-4 rounded-2xl border border-slate-100">
                                             <Upload size={40} className="text-[#0a3d62]" />
                                         </div>
                                         <h2 className="text-2xl font-bold text-slate-800">Drop your image here</h2>
-                                        <p className="text-slate-400 mt-1 italic">or click to browse from your computer</p>
+                                        <p className="text-slate-400 mt-1 italic">or click to browse to your computer</p>
                                         <div className="mt-8 flex justify-center gap-8 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-                                            <span>PNG</span><span>JPG</span><span>WEBP</span>
+                                            <span>PNG</span>
+                                            <span>JPG</span>
+                                            <span>WEBP</span>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="w-full h-full p-6 flex flex-col">
                                         <img
-                                            src={previewUrl ?? undefined}
+                                            src={previewUrl}
                                             className="w-full h-full object-contain rounded-xl"
                                             alt="Uploaded Cell"
                                         />
@@ -138,6 +139,7 @@ export default function UploadCitra() {
                                                 <ZoomIn size={20} className="cursor-pointer hover:text-blue-500" />
                                             </div>
                                             <button
+                                                type="button"
                                                 onClick={handleClear}
                                                 className="text-red-600 font-bold text-sm tracking-widest uppercase hover:underline"
                                             >
@@ -149,24 +151,19 @@ export default function UploadCitra() {
                                 <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*" />
                             </div>
                         </div>
-
                         {/* RIGHT: ANALYSIS PANEL */}
                         <div className="lg:col-span-5 flex flex-col">
-                            <h3 className="text-center text-slate-400 font-bold tracking-[0.2em] mb-6 uppercase text-sm ml-[60px]">
+                            <h3 className="text-center text-slate-400 font-bold tracking-[0.2em] mb-8 uppercase text-sm">
                                 AI Analysis
                             </h3>
-
-                            {loading ? (
-                                <div className="flex-1 flex flex-col items-center justify-center text-blue-500">
-                                    <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-                                    <p className="text-sm font-medium">Analyzing cell samples...</p>
-                                </div>
-                            ) : results ? (
-                                <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                            {results ? (
+                                <div className="space-y-6">
+                                    {/* Quality Card */}
                                     <div className="bg-[#e4f9f0] p-6 rounded-xl border border-green-100">
                                         <p className="text-[10px] font-bold text-green-700 uppercase mb-1">Quality Result</p>
                                         <p className="text-4xl font-black text-green-700">{results.quality}</p>
                                     </div>
+                                    {/* Detection List */}
                                     <div className="border border-blue-400 rounded-2xl p-6 bg-white shadow-sm">
                                         <p className="text-[10px] font-bold text-blue-800 uppercase mb-4 tracking-wider">Detection Result</p>
                                         <div className="space-y-3">
@@ -187,29 +184,29 @@ export default function UploadCitra() {
                                 </div>
                             ) : (
                                 <div className="flex-1 flex flex-col items-center justify-center text-slate-400 text-center">
-                                    <div className="w-16 h-16 rounded-full border border-slate-100 flex items-center justify-center mb-4 ml-[65px]">
+                                    <div className="w-16 h-16 rounded-full border border-slate-100 flex items-center justify-center mb-4">
                                         <Search size={32} className="opacity-20" />
                                     </div>
-                                    <p className="max-w-[200px] text-sm leading-relaxed ml-[65px] ">
+                                    <p className="max-w-[180px] text-sm leading-relaxed">
                                         Upload an image to see analysis begin
                                     </p>
                                 </div>
                             )}
 
+                            {/* Action Button */}
                             <button
-                                disabled={!file || loading}
-                                className={`ml-[70px] px-10 py-2 rounded-xl font-bold uppercase tracking-widest transition-all
-                                    ${file && !loading
+                                className={`mt-10 w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all
+                                    ${results
                                         ? "bg-[#0066cc] text-white hover:bg-blue-700 shadow-lg shadow-blue-100"
                                         : "bg-slate-200 text-slate-400 cursor-not-allowed"}
-                                `}
+                `}
                             >
-                                {loading ? "Analyzing..." : "Submit Analysis"}
+                                Submit Analysis
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </AuthLayout>
+        </div>
     );
 }
