@@ -1,4 +1,5 @@
-import { ArrowLeft, Filter, Plus, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Filter, Plus, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { PatientRecord } from "../types/operator.types";
 
@@ -15,6 +16,27 @@ export default function PatientHistoryTable({
   onQueryChange,
   onBack,
 }: Props) {
+  const PAGE_SIZE = 6;
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [data.length, query]);
+
+  const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+
+  const pagedData = useMemo(() => {
+    const startIndex = (safePage - 1) * PAGE_SIZE;
+    return data.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [data, safePage]);
+
+  const startRecord = data.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const endRecord = Math.min(safePage * PAGE_SIZE, data.length);
+
+  const handlePrev = () => setPage((prev) => Math.max(1, prev - 1));
+  const handleNext = () => setPage((prev) => Math.min(totalPages, prev + 1));
+
   return (
     <section className="mt-5">
       <div className="flex items-center justify-between">
@@ -64,7 +86,29 @@ export default function PatientHistoryTable({
               Filters
             </button>
           </div>
-          <p className="text-xs text-slate-500">Showing 1 - {data.length} of {data.length} records</p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-slate-500">
+              Showing {startRecord} - {endRecord} of {data.length} records
+            </p>
+            <button
+              type="button"
+              onClick={handlePrev}
+              aria-label="Previous page"
+              disabled={safePage === 1}
+              className="w-8 h-8 inline-flex items-center justify-center rounded border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              aria-label="Next page"
+              disabled={safePage === totalPages || data.length === 0}
+              className="w-8 h-8 inline-flex items-center justify-center rounded border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -78,7 +122,7 @@ export default function PatientHistoryTable({
               </tr>
             </thead>
             <tbody>
-              {data.map((row) => (
+              {pagedData.map((row) => (
                 <tr key={`${row.caseId}-${row.createdAt}`} className="border-b border-slate-100">
                   <td className="px-4 py-3 text-[#0A52D6] font-medium text-sm">{row.caseId}</td>
                   <td className="px-4 py-3 text-slate-700 text-sm">{row.patientName}</td>
