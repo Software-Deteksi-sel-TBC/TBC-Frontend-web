@@ -14,25 +14,27 @@ export default function OperatorTopNav() {
   return (
     <header className="h-12 bg-white border-b border-blue-100 px-4 md:px-6 flex items-center justify-between">
       <div className="flex items-center gap-6">
-        <Link 
-        to="/operator/dashboard"
-        className="text-[#0A52D6] font-semibold"
+        <Link
+          to="/operator/dashboard"
+          className="text-[#0A52D6] font-semibold"
         >
           tbc-project
         </Link>
         <nav className="flex items-center gap-5">
-          <Link 
-          to="/operator/dashboard"
-          className={`${LinkBase} ${isActive("/operator/dashboard") || isActive("/dashboard")
-            ? "text-[#0A52D6]" : "text-slate-500 hover:text-[#0A52D6]" 
-          }`}
+          <Link
+            to="/operator/dashboard"
+            className={`${LinkBase} ${isActive("/operator/dashboard") || isActive("/dashboard")
+              ? "text-[#0A52D6] border-b-2 border-[#0A52D6]" 
+              : "text-slate-500 hover:text-[#0A52D6] border-b-2 border-transparent"
+              }`}
           >
             Dashboard
           </Link>
-          <Link 
-          to="/operator/upload"
-          className={`${LinkBase} ${isActive("/operator/upload")
-            ? "text-[#0A52D6]" : "text-slate-500 hover:text-[#0A52D6]" 
+          <Link
+            to="/operator/patient-form"
+            className={`${LinkBase} ${isActive("/operator/patient-form") || isActive("/operator/upload")
+              ? "text-[#0A52D6] border-b-2 border-[#0A52D6]" 
+              : "text-slate-500 hover:text-[#0A52D6] border-b-2 border-transparent"
           }`}
           >
             Upload

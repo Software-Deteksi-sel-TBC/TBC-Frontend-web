@@ -5,6 +5,7 @@ type Props ={
   onLoadDemo: () => void;
 }
 
+
 export default function OperatorEmptyState({ onLoadDemo }: Props) {
   return (
     <section className="max-w-3xl mx-auto mt-16 text-center">
@@ -27,7 +28,7 @@ export default function OperatorEmptyState({ onLoadDemo }: Props) {
 
         <div className="mt-5 flex flex-wrap gap-3">
           <Link 
-            to="/operator/upload"
+            to="/operator/patient-form"
             className="inline-flex items-center px-4 py-2 bg-[#0A52D6] text-white hover:bg-[#0A52D6] hover:text-white text-white rounded text-xs uppercase tracking-wider font-semibold"
           >
             Start New Workflow

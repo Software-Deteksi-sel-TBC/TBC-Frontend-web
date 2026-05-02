@@ -1,6 +1,5 @@
 import { useState, useRef, type ChangeEvent, type DragEvent } from "react";
 import { Upload, Search, LogOut, User, ZoomIn, ZoomOut } from "lucide-react";
-import bg from "../assets/Background.png";
 
 
 
@@ -69,15 +68,7 @@ export default function UploadCitra() {
     };
 
     return (
-        <div
-            className="min-h-screen w-full px-3 py-4 md:px-6 md:py-8"
-            style={{
-                backgroundImage: `url(${bg})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-            }}
-        >
+        <div>
             <div className="w-full max-w-6xl mx-auto font-sans">
                 {/* Top Navbar Simulation */}
                 <div className="flex justify-end items-center gap-4 mb-6">
