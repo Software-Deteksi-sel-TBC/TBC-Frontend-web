@@ -60,6 +60,6 @@ export const resetPassword = async (data: ResetPasswordPayload) => {
 };
 
 export const updateCredential = async (data: UpdateCredentialPayload) => {
-  const response = await api.post("/auth/update-credential", data);
+  const response = await api.post("/auth/update-credentials", data);
   return response.data;
 };
