@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from "react";
+import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import AuthLayout from "../../layouts/AuthLayout";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
+import { updateCredential } from "../../features/auth/services/auth.service";
 
 export default function UpdateCredentials() {
     const location = useLocation();
@@ -17,12 +19,35 @@ export default function UpdateCredentials() {
     });
 
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setLoading(true);
+        setError("");
 
-        setTimeout(() => {
+        if (!formData.email || !formData.currentPassword || !formData.newPassword) {
+            setError("Semua field wajib diisi.");
+            return;
+        }
+
+        if (formData.newPassword.length < 8) {
+            setError("Password baru minimal 8 karakter.");
+            return;
+        }
+
+        if (formData.newPassword !== formData.confirmPassword) {
+            setError("Konfirmasi password tidak sama.");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await updateCredential({
+                email: formData.email,
+                currentPassword: formData.currentPassword,
+                newPassword: formData.newPassword,
+            });
+
             setLoading(false);
             navigate("/login", {
                 state: {
@@ -30,7 +55,27 @@ export default function UpdateCredentials() {
                         "Password updated. Please log in with your new credentials.",
                 },
             });
-        }, 1500);
+        } catch (err: unknown) {
+            const fallbackMessage = "Gagal memperbarui credential.";
+
+            if (!axios.isAxiosError(err)) {
+                setError(fallbackMessage);
+                return;
+            }
+
+            const responseData = err.response?.data;
+            if (responseData && typeof responseData === "object") {
+                const message = (responseData as { message?: unknown }).message;
+                if (typeof message === "string" && message.length > 0) {
+                    setError(message);
+                    return;
+                }
+            }
+
+            setError(fallbackMessage);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -53,6 +98,12 @@ export default function UpdateCredentials() {
                     your protection, please update it immediately.
                 </p>
             </div>
+
+            {error && (
+                <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-xs md:text-sm text-red-700">
+                    {error}
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6 pb-4">
                 <div>

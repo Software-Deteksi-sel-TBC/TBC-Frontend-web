@@ -4,7 +4,7 @@ import ResetPasswordEmail from "../pages/auth/ResetPasswordEmail";
 import ResetPassword from "../pages/auth/ResetPassword";
 import ResetSuccess from "../pages/auth/ResetSuccess";
 import UpdateCredentials from "../pages/auth/UpdateCredentials";
-import UploadCitra from "../pages/UploadCitra";
+// import UploadCitra from "../pages/UploadCitra";
 import OperatorDashboardPage from "../features/operator/pages/OperatorDashboardPage";
 import OperatorUploadPage from "../features/operator/pages/OperatorUploadPage";
 import OperatorPatientFormPage from "../features/operator/pages/OperatorPatientFormPage";
@@ -23,7 +23,7 @@ export default function AppRoutes() {
         <Route path="/operator/dashboard" element={<OperatorDashboardPage />} />
         <Route path="/operator/patient-form" element={<OperatorPatientFormPage />} />
         <Route path="/operator/upload" element={<OperatorUploadPage />} />
-        <Route path="/upload" element={<UploadCitra />} />
+        {/* <Route path="/upload" element={<UploadCitra />} /> */}
       </Routes>
     </BrowserRouter>
   );
