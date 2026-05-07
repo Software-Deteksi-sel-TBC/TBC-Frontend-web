@@ -5,6 +5,7 @@ import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import AuthLayout from "../../layouts/AuthLayout";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -15,6 +16,7 @@ export default function Login() {
 
     const navigate = useNavigate();
     const location = useLocation();
+    const { login: contextLogin } = useAuth();
     const successMsg = location.state?.successMessage;
 
     const handleLogin = async (e?: React.FormEvent) => {
@@ -28,9 +30,12 @@ export default function Login() {
             setLoading(true);
 
             const res = await login({ email, password });
-
             const storage = remember ? localStorage : sessionStorage;
             storage.setItem("token", res.token);
+
+            if (res.user && typeof res.user === "object") {
+                contextLogin(res.user as any, res.token);
+            }
 
             if (res.user?.is_first_login) {
                 navigate("/update-credentials", {
