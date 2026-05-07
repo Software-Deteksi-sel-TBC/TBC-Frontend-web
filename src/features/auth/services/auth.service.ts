@@ -18,6 +18,7 @@ export interface UpdateCredentialPayload {
   email: string;
   currentPassword: string;
   newPassword: string;
+  confirmPassword: string;
 }
 
 export interface LoginResponse {

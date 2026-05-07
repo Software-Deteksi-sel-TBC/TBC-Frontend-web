@@ -46,6 +46,7 @@ export default function UpdateCredentials() {
                 email: formData.email,
                 currentPassword: formData.currentPassword,
                 newPassword: formData.newPassword,
+                confirmPassword: formData.confirmPassword,
             });
 
             setLoading(false);
