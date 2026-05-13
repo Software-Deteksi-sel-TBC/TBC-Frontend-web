@@ -30,14 +30,25 @@ export default function Login() {
             setLoading(true);
 
             const res = await login({ email, password });
-            const storage = remember ? localStorage : sessionStorage;
-            storage.setItem("token", res.token);
 
-            if (res.user && typeof res.user === "object") {
-                contextLogin(res.user as any, res.token);
+            if (!res.token) {
+                throw new Error("Token tidak ditemukan dari response login");
             }
 
-            if (res.user?.is_first_login) {
+            const user = {
+                ...(res.user && typeof res.user === "object" ? res.user : {}),
+                email,
+            } as {
+                id: string;
+                name: string;
+                role: string;
+                is_first_login: boolean;
+                email?: string;
+            };
+
+            contextLogin(user, res.token, remember);
+
+            if (user.is_first_login) {
                 navigate("/update-credentials", {
                     state: {
                         currentEmail: email,
@@ -45,7 +56,7 @@ export default function Login() {
                     },
                 });
             } else {
-                navigate("/dashboard");
+                navigate(user.role === "OPERATOR_LAB" ? "/operator/dashboard" : "/dashboard");
             }
         } catch (err: unknown) {
             const fallbackMessage =
