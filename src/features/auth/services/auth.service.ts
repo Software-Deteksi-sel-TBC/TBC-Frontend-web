@@ -61,6 +61,19 @@ export const resetPassword = async (data: ResetPasswordPayload) => {
 };
 
 export const updateCredential = async (data: UpdateCredentialPayload) => {
-  const response = await api.post("/auth/update-credentials", data);
+  const payload: UpdateCredentialPayload = {
+    email: String(data.email).trim(),
+    currentPassword: String(data.currentPassword),
+    newPassword: String(data.newPassword),
+    confirmPassword: String(data.confirmPassword),
+  };
+
+  const response = await api.post(
+    "/auth/update-credentials",
+    JSON.stringify(payload),
+    {
+      headers: { "Content-Type": "application/json" },
+    },
+  );
   return response.data;
 };

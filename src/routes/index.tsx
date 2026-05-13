@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import type { ReactElement } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "../pages/auth/Login";
 import ResetPasswordEmail from "../pages/auth/ResetPasswordEmail";
 import ResetPassword from "../pages/auth/ResetPassword";
@@ -8,6 +9,15 @@ import UpdateCredentials from "../pages/auth/UpdateCredentials";
 import OperatorDashboardPage from "../features/operator/pages/OperatorDashboardPage";
 import OperatorUploadPage from "../features/operator/pages/OperatorUploadPage";
 import OperatorPatientFormPage from "../features/operator/pages/OperatorPatientFormPage";
+import { useAuth } from "../context/AuthContext";
+
+function RequireAuth({ children }: { children: ReactElement }) {
+  const { user } = useAuth();
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+  if (!token) return <Navigate to="/login" replace />;
+  if (user?.role && user.role !== "OPERATOR_LAB") return <Navigate to="/login" replace />;
+  return children;
+}
 
 export default function AppRoutes() {
   return (
@@ -19,10 +29,38 @@ export default function AppRoutes() {
         <Route path="/reset-success" element={<ResetSuccess />} />
         <Route path="/update-credentials" element={<UpdateCredentials />} />
         <Route path="/reset-password-email" element={<ResetPasswordEmail />} />
-        <Route path="/dashboard" element={<OperatorDashboardPage />} />
-        <Route path="/operator/dashboard" element={<OperatorDashboardPage />} />
-        <Route path="/operator/patient-form" element={<OperatorPatientFormPage />} />
-        <Route path="/operator/upload" element={<OperatorUploadPage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth>
+              <OperatorDashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/operator/dashboard"
+          element={
+            <RequireAuth>
+              <OperatorDashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/operator/patient-form"
+          element={
+            <RequireAuth>
+              <OperatorPatientFormPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/operator/upload"
+          element={
+            <RequireAuth>
+              <OperatorUploadPage />
+            </RequireAuth>
+          }
+        />
         {/* <Route path="/upload" element={<UploadCitra />} /> */}
       </Routes>
     </BrowserRouter>

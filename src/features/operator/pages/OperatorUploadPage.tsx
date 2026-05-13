@@ -1,8 +1,7 @@
-import { useState, useRef, type ChangeEvent, type DragEvent } from "react";
+import { useState, useRef, type DragEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Upload, Search, Trash2, User,
-  CheckCircle2, AlertCircle, Clock, ChevronRight
+  Upload, Search, Trash2
 } from "lucide-react";
 import OperatorTopNav from "../components/OperatorTopNav";
 
@@ -82,7 +81,7 @@ export default function UploadCitra() {
                       type="radio"
                       name="mag"
                       checked={magnification === val}
-                      onChange={() => setMagnification(val as any)}
+                      onChange={() => setMagnification(val as "10x" | "40x")}
                       className="w-4 h-4 text-blue-600"
                     />
                     <span className="text-sm font-medium">{val}</span>
@@ -97,7 +96,7 @@ export default function UploadCitra() {
               <input
                 type="text"
                 value={caseId}
-                onChange={(e) => setMagnification(e.target.value as any)}
+                onChange={(e) => setCaseId(e.target.value)}
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 font-medium"
               />
             </div>
@@ -119,7 +118,14 @@ export default function UploadCitra() {
               <div className="mt-6 flex gap-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                 <span>PNG</span><span>JPG</span><span>WEBP</span>
               </div>
-              <input type="file" ref={fileInputRef} className="hidden" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files)} />
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                multiple
+                onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                aria-label="Upload citra"
+              />
             </div>
           </div>
         </div>
@@ -161,7 +167,12 @@ export default function UploadCitra() {
                       <StatusPill status={item.status} text={item.quality} />
                     </td>
                     <td className="px-6 py-4">
-                      <button onClick={() => removeFile(item.id)} className="text-red-400 hover:text-red-600 p-1">
+                      <button
+                        type="button"
+                        onClick={() => removeFile(item.id)}
+                        className="text-red-400 hover:text-red-600 p-1"
+                        aria-label="Remove file"
+                      >
                         <Trash2 size={18} />
                       </button>
                     </td>
