@@ -6,7 +6,6 @@ export interface PatientRecord {
   patientName: string;
   received: string;
   createdAt: string;
-  caseUuid?: string;
 }
 
 export interface CaseImageSummary {
@@ -15,5 +14,6 @@ export interface CaseImageSummary {
   magnification: string;
   qc_status: string;
   qc_failure_reason: string | null;
-  uploaded_at: string;
+  uploaded_at?: string;
+  view_url?: string | null;
 }

@@ -28,25 +28,27 @@ export default function OperatorDashboardPage() {
     return diffD === 1 ? "Yesterday" : `${diffD}d ago`;
   };
 
-  const loadPatients = async () => {
+  const loadCases = async () => {
     setLoadError(null);
     try {
       setLoading(true);
-      const res = await api.get("/patients", { params: { page: "1", limit: "200" } });
+      const res = await api.get("/cases", { params: { page: "1", limit: "200" } });
       const body = res.data as { data?: unknown };
       const items = Array.isArray((body as any).data) ? ((body as any).data as any[]) : [];
 
-      const filtered = user?.id ? items.filter((p) => String(p.created_by ?? "") === user.id) : items;
+      const filtered = user?.id ? items.filter((c) => String(c.created_by ?? "") === user.id) : items;
 
-      const mapped: PatientRecord[] = filtered.map((p) => {
-        const patientId = String(p.id ?? "");
-        const createdAt = String(p.created_at ?? new Date().toISOString());
-        const patientName = String(p.name ?? "-");
-        const noInduk = p.no_induk ? String(p.no_induk) : undefined;
+      const mapped: PatientRecord[] = filtered.map((c) => {
+        const id = String(c.id ?? "");
+        const createdAt = String(c.created_at ?? new Date().toISOString());
+        const patient = (c.patient ?? {}) as any;
+        const patientId = String(patient.id ?? "");
+        const patientName = String(patient.name ?? "-");
+        const noInduk = patient.no_induk ? String(patient.no_induk) : undefined;
 
         return {
-          id: patientId,
-          caseId: "-",
+          id,
+          caseId: `CASE-${id.slice(0, 8).toUpperCase()}`,
           patientId,
           patientNoInduk: noInduk,
           patientName,
@@ -66,14 +68,14 @@ export default function OperatorDashboardPage() {
         axios.isAxiosError(err) && typeof err.response?.data === "object" && err.response?.data
           ? (err.response.data as any).message
           : null;
-      setLoadError(typeof message === "string" && message.length > 0 ? message : "Gagal memuat data pasien.");
+      setLoadError(typeof message === "string" && message.length > 0 ? message : "Gagal memuat data kasus.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadPatients();
+    void loadCases();
   }, []);
 
   const filteredPatients = useMemo(() => {
@@ -82,6 +84,7 @@ export default function OperatorDashboardPage() {
 
     return patients.filter(
       (item) =>
+        item.caseId.toLowerCase().includes(keyword) ||
         item.patientName.toLowerCase().includes(keyword) ||
         (item.patientNoInduk?.toLowerCase().includes(keyword) ?? false),
     );
@@ -103,7 +106,7 @@ export default function OperatorDashboardPage() {
             {loadError}
           </div>
         ) : patients.length === 0 ? (
-          <OperatorEmptyState onLoadDemo={loadPatients} />
+          <OperatorEmptyState onLoadDemo={loadCases} />
         ) : (
           <PatientHistoryTable
             data={filteredPatients}

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import OperatorTopNav from "../components/OperatorTopNav";
 import { ChevronRight } from "lucide-react";
+import axios from "axios";
+import { api } from "../../../services/api";
 
 export default function OperatorPatientFormPage() {
     const navigate = useNavigate();
@@ -13,10 +15,56 @@ export default function OperatorPatientFormPage() {
         bpjs: "",
         notes: "",
     });
+    const [submitting, setSubmitting] = useState(false);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    const handleContinue = (e: React.FormEvent) => {
+    const handleContinue = async (e: React.FormEvent) => {
         e.preventDefault();
-        navigate("/operator/upload");
+        setErrorMsg(null);
+
+        const nik = formData.patientId.replace(/\D/g, "").slice(0, 16);
+        if (!/^\d{16}$/.test(nik)) {
+            setErrorMsg("NIK harus 16 digit angka.");
+            return;
+        }
+
+        const age = Number(formData.age);
+        if (!Number.isFinite(age)) {
+            setErrorMsg("Umur harus berupa angka.");
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+            const patientPayload = {
+                name: formData.fullName.trim(),
+                no_induk: nik,
+                sex: formData.sex,
+                age,
+                bpjs_number: formData.bpjs.trim() ? formData.bpjs.trim() : undefined,
+            };
+
+            const patientRes = await api.post("/patients", patientPayload);
+            const patientId = String((patientRes.data as any)?.data?.id ?? "");
+            if (!patientId) throw new Error("ID pasien tidak ditemukan dari response backend.");
+
+            const caseRes = await api.post("/cases", {
+                patient_id: patientId,
+                notes: formData.notes.trim() ? formData.notes.trim() : undefined,
+            });
+            const caseId = String((caseRes.data as any)?.data?.id ?? "");
+            if (!caseId) throw new Error("ID kasus tidak ditemukan dari response backend.");
+
+            navigate(`/operator/upload?caseId=${encodeURIComponent(caseId)}`);
+        } catch (err: unknown) {
+            const message =
+                axios.isAxiosError(err) && typeof err.response?.data === "object" && err.response?.data
+                    ? (err.response.data as any).message
+                    : null;
+            setErrorMsg(typeof message === "string" && message.length > 0 ? message : "Gagal menyimpan data pasien.");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -24,7 +72,11 @@ export default function OperatorPatientFormPage() {
             <OperatorTopNav />
 
             <main className="max-w-[1260px] mx-auto px-4 py-6">
-                <form onSubmit={handleContinue} className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+                <form
+                    id="operator-patient-form"
+                    onSubmit={handleContinue}
+                    className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200"
+                >
                     {/* Form Header */}
                     <div className="bg-[#0055CC] text-white px-6 py-3 flex items-center gap-2 font-medium">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>
@@ -32,6 +84,11 @@ export default function OperatorPatientFormPage() {
                     </div>
 
                     <div className="p-8 space-y-8">
+                        {errorMsg ? (
+                            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                {errorMsg}
+                            </div>
+                        ) : null}
                         {/* Top Row: Name and ID */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-2">
@@ -52,7 +109,15 @@ export default function OperatorPatientFormPage() {
                                     placeholder="e.g., 123108"
                                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     value={formData.patientId}
-                                    onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
+                                    inputMode="numeric"
+                                    pattern="\d*"
+                                    maxLength={16}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            patientId: e.target.value.replace(/\D/g, "").slice(0, 16),
+                                        })
+                                    }
                                     required
                                 />
                             </div>
@@ -80,8 +145,8 @@ export default function OperatorPatientFormPage() {
                                     required
                                 >
                                     <option value="">Select Sex</option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
+                                    <option value="LAKI_LAKI">LAKI-LAKI</option>
+                                    <option value="PEREMPUAN">PEREMPUAN</option>
                                 </select>
                             </div>
                             <div className="space-y-2">
@@ -119,16 +184,19 @@ export default function OperatorPatientFormPage() {
                 {/* Footer Buttons */}
                 <div className="mt-8 flex justify-end gap-4">
                     <button
+                        type="button"
                         onClick={() => navigate(-1)}
                         className="px-8 py-2.5 border border-[#0055CC] text-[#0055CC] font-semibold rounded-lg hover:bg-blue-50 transition-colors"
                     >
                         Back
                     </button>
                     <button
-                        onClick={handleContinue}
+                        type="submit"
+                        form="operator-patient-form"
+                        disabled={submitting}
                         className="px-8 py-2.5 bg-[#0055CC] text-white font-semibold rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2"
                     >
-                        Continue <ChevronRight size={18} />
+                        {submitting ? "Saving..." : "Continue"} <ChevronRight size={18} />
                     </button>
                 </div>
             </main>
