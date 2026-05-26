@@ -91,6 +91,16 @@ export default function OperatorUploadPage() {
 
   const getPills = (img: CaseImageSummary) => {
     if (img.qc_status === "PASSED") return { status: "success", text: "Fokus Bagus" };
+    if (img.qc_status === "FAILED") {
+      const reasonMap: Record<string, string> = {
+        BLUR: "Buram",
+        DARK: "Terlalu Gelap",
+        BRIGHT: "Terlalu Terang",
+        NOISE: "Banyak Noise",
+      };
+      const text = img.qc_failure_reason ? (reasonMap[img.qc_failure_reason] ?? img.qc_failure_reason) : "Gagal QC";
+      return { status: "error", text };
+    }
     return { status: "pending", text: "Pending" };
   };
 
