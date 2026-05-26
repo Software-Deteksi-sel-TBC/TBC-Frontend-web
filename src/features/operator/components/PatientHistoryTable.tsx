@@ -49,6 +49,7 @@ export default function PatientHistoryTable({
             const res = await api.get(`/cases/${caseId}/images`);
             const images = Array.isArray((res.data as any)?.data)
               ? ((res.data as any).data as CaseImageSummary[])
+
               : [];
             return { caseId, images };
           }),

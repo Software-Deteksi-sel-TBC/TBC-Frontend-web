@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TBcan Login</title>
+  <style>
+    * {
+      margin: 0px;
+      padding: 0px;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      background: url('Login.png') no-repeat center center fixed
+    }
+
+    /* Login Card */
+    .login-container {
+      width: 350px;
+      padding: 30px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      text-align: center;
+      position: fixed;
+      z-index: 10;
+    }
+
+    .login-container h1 {
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      text-align: left;
+      margin-bottom: 15px;
+    }
+
+    .input-group label {
+      font-size: 14px;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    .options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      margin-bottom: 20px;
+    }
+
+    .options a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background: #1d4ed8;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .login-btn:hover {
+      background: #1e40af;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login Card -->
+  <div class="login-container">
+    <h1>TBcan</h1>
+
+    <div class="input-group">
+      <label>Username</label>
+      <input type="text" placeholder="Enter username">
+    </div>
+
+    <div class="input-group">
+      <label>Password</label>
+      <input type="password" placeholder="Enter password">
+    </div>
+
+    <div class="options">
+      <label><input type="checkbox"> Ingat Saya</label>
+      <a href="#">Lupa Password</a>
+    </div>
+
+    <button class="login-btn">Login</button>
+  </div>
+
+</body>
+</html>
