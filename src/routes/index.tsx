@@ -31,9 +31,30 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/reset-success" element={<ResetSuccess />} />
-        <Route path="/update-credentials" element={<UpdateCredentials />} />
+        <Route
+          path="/reset-password"
+          element={
+            <RequireAuth allowedRoles={["OPERATOR_LAB", "DOKTER_PATOLOGI", "ADMIN_AI"]}>
+              <ResetPassword />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/reset-success"
+          element={
+            <RequireAuth allowedRoles={["OPERATOR_LAB", "DOKTER_PATOLOGI", "ADMIN_AI"]}>
+              <ResetSuccess />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/update-credentials"
+          element={
+            <RequireAuth allowedRoles={["OPERATOR_LAB", "DOKTER_PATOLOGI", "ADMIN_AI"]}>
+              <UpdateCredentials />
+            </RequireAuth>
+          }
+        />
         <Route path="/reset-password-email" element={<ResetPasswordEmail />} />
         <Route
           path="/dashboard"
