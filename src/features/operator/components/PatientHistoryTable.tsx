@@ -46,12 +46,16 @@ export default function PatientHistoryTable({
       try {
         const results = await Promise.all(
           caseIds.map(async (caseId) => {
-            const res = await api.get(`/cases/${caseId}/images`);
-            const images = Array.isArray((res.data as any)?.data)
-              ? ((res.data as any).data as CaseImageSummary[])
-
-              : [];
-            return { caseId, images };
+            try {
+              const res = await api.get(`/cases/${caseId}/images`);
+              const images = Array.isArray((res.data as any)?.data)
+                ? ((res.data as any).data as CaseImageSummary[])
+                : [];
+              return { caseId, images };
+            } catch (err) {
+              console.error(`Gagal mengambil gambar untuk case ${caseId}:`, err);
+              return { caseId, images: [] };
+            }
           }),
         );
 
