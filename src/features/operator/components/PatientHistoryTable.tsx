@@ -62,7 +62,7 @@ export default function PatientHistoryTable({
               : [];
 
             const latestCase = cases[0] ? cases[0] : null;
-            if (!latestCase?.id) return { patientId, caseUuid: null as string | null, images: [] as CaseImageSummary[] };
+            if (!latestCase?.id) return { patientId, caseUuid: null as string | null, caseDisplay: "", received: "", images: [] as CaseImageSummary[] };
 
             const caseUuid = String(latestCase.id);
             const caseDisplay = `CASE-${caseUuid.slice(0, 8).toUpperCase()}`;

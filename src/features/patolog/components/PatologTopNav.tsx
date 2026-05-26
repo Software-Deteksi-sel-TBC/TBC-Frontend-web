@@ -1,21 +1,13 @@
 import { CircleUserRound, LogOut } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { useState, useRef, useEffect } from "react";
 
-// const linkBase =
-//   "text-xs uppercase tracking-wide font-medium transition-colors";
-
-const LinkBase = "text-xs uppercase tracking-wide font-medium transition-colors";
-
 export default function PatologTopNav() {
-    const location = useLocation();
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-
-    const isActive = (path: string) => location.pathname === path;
 
     // Handle click outside to close menu
     useEffect(() => {

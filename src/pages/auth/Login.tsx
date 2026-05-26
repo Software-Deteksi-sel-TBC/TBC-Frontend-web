@@ -56,7 +56,13 @@ export default function Login() {
                     },
                 });
             } else {
-                navigate(user.role === "OPERATOR_LAB" ? "/operator/dashboard" : "/dashboard");
+                if (user.role === "OPERATOR_LAB") {
+                    navigate("/operator/dashboard");
+                } else if (user.role === "DOKTER_PATOLOGI") {
+                    navigate("/patolog/dashboard");
+                } else {
+                    navigate("/dashboard");
+                }
             }
         } catch (err: unknown) {
             const fallbackMessage =

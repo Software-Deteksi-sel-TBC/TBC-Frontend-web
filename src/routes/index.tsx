@@ -9,13 +9,19 @@ import UpdateCredentials from "../pages/auth/UpdateCredentials";
 import OperatorDashboardPage from "../features/operator/pages/OperatorDashboardPage";
 import OperatorUploadPage from "../features/operator/pages/OperatorUploadPage";
 import OperatorPatientFormPage from "../features/operator/pages/OperatorPatientFormPage";
+import PatologDashboardPage from "../features/patolog/pages/PatologDashboard";
 import { useAuth } from "../context/AuthContext";
 
-function RequireAuth({ children }: { children: ReactElement }) {
+function RequireAuth({ children, allowedRoles }: { children: ReactElement; allowedRoles?: string[] }) {
   const { user } = useAuth();
   const token = localStorage.getItem("token") || sessionStorage.getItem("token");
   if (!token) return <Navigate to="/login" replace />;
-  if (user?.role && user.role !== "OPERATOR_LAB") return <Navigate to="/login" replace />;
+  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!allowedRoles && user?.role && user.role !== "OPERATOR_LAB") {
+    return <Navigate to="/login" replace />;
+  }
   return children;
 }
 
@@ -32,7 +38,7 @@ export default function AppRoutes() {
         <Route
           path="/dashboard"
           element={
-            <RequireAuth>
+            <RequireAuth allowedRoles={["OPERATOR_LAB"]}>
               <OperatorDashboardPage />
             </RequireAuth>
           }
@@ -40,7 +46,7 @@ export default function AppRoutes() {
         <Route
           path="/operator/dashboard"
           element={
-            <RequireAuth>
+            <RequireAuth allowedRoles={["OPERATOR_LAB"]}>
               <OperatorDashboardPage />
             </RequireAuth>
           }
@@ -48,7 +54,7 @@ export default function AppRoutes() {
         <Route
           path="/operator/patient-form"
           element={
-            <RequireAuth>
+            <RequireAuth allowedRoles={["OPERATOR_LAB"]}>
               <OperatorPatientFormPage />
             </RequireAuth>
           }
@@ -56,8 +62,16 @@ export default function AppRoutes() {
         <Route
           path="/operator/upload"
           element={
-            <RequireAuth>
+            <RequireAuth allowedRoles={["OPERATOR_LAB"]}>
               <OperatorUploadPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/patolog/dashboard"
+          element={
+            <RequireAuth allowedRoles={["DOKTER_PATOLOGI"]}>
+              <PatologDashboardPage />
             </RequireAuth>
           }
         />
