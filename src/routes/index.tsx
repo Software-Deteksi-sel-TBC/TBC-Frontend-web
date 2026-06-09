@@ -10,6 +10,7 @@ import OperatorDashboardPage from "../features/operator/pages/OperatorDashboardP
 import OperatorUploadPage from "../features/operator/pages/OperatorUploadPage";
 import OperatorPatientFormPage from "../features/operator/pages/OperatorPatientFormPage";
 import PatologDashboardPage from "../features/patolog/pages/PatologDashboard";
+import PatologCaseDetailsPage from "../features/patolog/pages/PatologCaseDetailsPage";
 import { useAuth } from "../context/AuthContext";
 
 function RequireAuth({ children, allowedRoles }: { children: ReactElement; allowedRoles?: string[] }) {
@@ -93,6 +94,14 @@ export default function AppRoutes() {
           element={
             <RequireAuth allowedRoles={["DOKTER_PATOLOGI"]}>
               <PatologDashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/patolog/validate/:id"
+          element={
+            <RequireAuth allowedRoles={["DOKTER_PATOLOGI"]}>
+              <PatologCaseDetailsPage />
             </RequireAuth>
           }
         />

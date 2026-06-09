@@ -30,7 +30,11 @@ export interface LoginResponse {
 }
 
 export const login = async (data: LoginPayload) => {
-  const response = await api.post("/auth/login", data);
+  const payload: LoginPayload = {
+    email: String(data.email).trim().toLowerCase(),
+    password: String(data.password),
+  };
+  const response = await api.post("/auth/login", payload);
   const body = response.data as {
     token?: string;
     user?: unknown;
