@@ -73,6 +73,15 @@ export default function Login() {
                 return;
             }
 
+            if (!err.response) {
+                setError("Gagal terhubung ke server. Pastikan backend berjalan dan proxy Vite mengarah ke port backend.");
+                return;
+            }
+
+            if (err.response?.status === 401) {
+                setError("Email atau password tidak valid.");
+            }
+
             const responseData = err.response?.data;
             if (responseData && typeof responseData === "object") {
                 const message = (responseData as { message?: unknown }).message;
