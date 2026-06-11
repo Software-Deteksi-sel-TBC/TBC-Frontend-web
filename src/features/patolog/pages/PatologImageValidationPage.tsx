@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
-import { FileText, ZoomIn, ZoomOut } from "lucide-react";
+import { FileText, ZoomIn, X, ZoomOut } from "lucide-react";
 import PatologTopNav from "../components/PatologTopNav";
 import { api } from "../../../services/api";
 import { useAuth } from "../../../context/AuthContext";
@@ -16,6 +16,13 @@ type SeverityLevel =
 
 // Level count per HPF mengikuti Prisma enum di backend
 type HpfCountLevel = "TIDAK_ADA" | "JARANG" | "CUKUP_BANYAK" | "SANGAT_BANYAK";
+
+type Comment = {
+  id: string;
+  content: string;
+  created_at: string;
+  user?: { name: string };
+};
 
 // Shape data detail citra dari endpoint: GET /api/review/cases/:caseId/images/:imageId
 type ReviewImageDetail = {
@@ -40,20 +47,25 @@ type ReviewImageDetail = {
   } | null;
 };
 
-// Helpers: format enum agar tampil cantik di UI
-const formatSeverity = (v: SeverityLevel) =>
-  v.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+// --- Options for Validation Form ---
+const severityOptions: SeverityLevel[] = ["SANGAT_RENDAH", "RENDAH", "SEDANG", "TINGGI", "SANGAT_TINGGI"];
+const countOptions: HpfCountLevel[] = ["TIDAK_ADA", "JARANG", "CUKUP_BANYAK", "SANGAT_BANYAK"];
 
-const formatCountLevel = (v: HpfCountLevel) =>
-  v.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-
-// Helpers: warna label untuk severity/count di UI (indikasi visual)
+// --- Helpers ---
+const formatLabel = (v: string) => v.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 const severityBadge = (label: string) => {
   const key = label.toLowerCase();
   if (key.includes("sangat tinggi") || key.includes("tinggi")) return "text-red-600";
   if (key.includes("sedang") || key.includes("cukup")) return "text-orange-600";
   return "text-green-600";
 };
+
+// Helpers: format enum agar tampil cantik di UI
+const formatSeverity = (v: SeverityLevel) =>
+  v.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+const formatCountLevel = (v: HpfCountLevel) =>
+  v.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
 // Helpers: fallback mapping dari angka AI → enum severity (hanya untuk prefill validasi)
 const deriveSeverityFromPercent = (n: number | null | undefined): SeverityLevel => {
@@ -79,9 +91,10 @@ export default function PatologImageValidationPage() {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  // State: loading & error halaman
+  // State: loading, error halaman, comment
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
 
   // State: data detail citra dan identitas pasien
   const [detail, setDetail] = useState<ReviewImageDetail | null>(null);
@@ -94,73 +107,85 @@ export default function PatologImageValidationPage() {
 
   // State: UI interactions
   const [zoom, setZoom] = useState(1);
-  const [comment, setComment] = useState("");
+  const [commentText, setCommentText] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
-  const [submittingValidation, setSubmittingValidation] = useState(false);
-  const [generating, setGenerating] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // States for Processing
+  const [submitting, setSubmitting] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  // Form State untuk Validasi Dokter
+  const [formData, setFormData] = useState({
+    necrosis_severity: "SANGAT_RENDAH" as SeverityLevel,
+    granuloma_severity: "SANGAT_RENDAH" as SeverityLevel,
+    datia_count_level: "TIDAK_ADA" as HpfCountLevel,
+    epithelioid_count_level: "TIDAK_ADA" as HpfCountLevel,
+  });
+
 
   // Derived: label singkat umur & jenis kelamin
   const patientYearsLabel = typeof patientInfo.age === "number" ? `${patientInfo.age}Y` : "-";
   const patientGenderLabel = patientInfo.sex === "LAKI_LAKI" ? "M" : patientInfo.sex === "PEREMPUAN" ? "F" : "-";
 
-  useEffect(() => {
-    // Fetch: detail kasus (untuk identitas pasien) + detail citra (untuk view_url, ai_result, validation, comments)
-    const load = async () => {
-      if (!caseId || !imageId) {
-        setErrorMsg("Parameter caseId / imageId tidak ditemukan.");
-        setLoading(false);
+  const fetchData = async () => {
+    if (!caseId || !imageId) return;
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+
+      // 1. Ambil data WAJIB (Case & Detail Citra) tanpa komentar dulu
+      const [caseRes, detailRes] = await Promise.all([
+        api.get(`/cases/${caseId}`),
+        api.get(`/review/cases/${caseId}/images/${imageId}`),
+      ]);
+
+      const kasus = caseRes.data?.data ?? {};
+      const patient = kasus.patient ?? {};
+      setPatientInfo({
+        caseLabel: `LAB-${String(kasus.id).slice(0, 4).toUpperCase()}`,
+        name: patient.name ?? "-",
+        age: patient.age,
+        sex: patient.sex,
+      });
+
+      const imgData = detailRes.data?.data ?? {};
+      setDetail(imgData);
+
+      // Prefill form modal
+      setFormData({
+        necrosis_severity: imgData.validation?.necrosis_severity ?? deriveSeverityFromPercent(imgData.ai_result?.total_necrosis_percent),
+        granuloma_severity: imgData.validation?.granuloma_severity ?? deriveSeverityFromPercent(imgData.ai_result?.total_granuloma_percent),
+        datia_count_level: imgData.validation?.datia_count_level ?? deriveCountLevel(imgData.ai_result?.total_datia_count),
+        epithelioid_count_level: imgData.validation?.epithelioid_count_level ?? deriveCountLevel(imgData.ai_result?.total_epiteloid_count),
+      });
+
+      // 2. Ambil komentar secara TERPISAH (Agar jika 404, halaman tidak crash)
+      try {
+        const commentRes = await api.get(`/images/${imageId}/comments`);
+        setComments(commentRes.data?.data ?? []);
+      } catch (e) {
+        console.warn("Endpoint komentar gagal (404/Not Found).");
+      }
+
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        logout();
+        navigate("/login");
         return;
       }
+      setErrorMsg("Gagal memuat data utama dari server.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setErrorMsg(null);
-      try {
-        setLoading(true);
-        const [caseRes, detailRes] = await Promise.all([
-          api.get(`/cases/${caseId}`),
-          api.get(`/review/cases/${caseId}/images/${imageId}`),
-        ]);
+  useEffect(() => { fetchData(); }, [caseId, imageId]);
 
-        const kasus = (caseRes.data as any)?.data ?? {};
-        const patient = (kasus.patient ?? {}) as any;
-
-        setPatientInfo({
-          caseLabel: `LAB-${String(kasus.id ?? caseId).slice(0, 4).toUpperCase()}`,
-          name: String(patient.name ?? "-"),
-          age: Number.isFinite(Number(patient.age)) ? Number(patient.age) : null,
-          sex: typeof patient.sex === "string" ? patient.sex : null,
-        });
-
-        const data = (detailRes.data as any)?.data ?? {};
-        setDetail({
-          id: String(data.id ?? imageId),
-          original_filename: String(data.original_filename ?? "-"),
-          magnification: String(data.magnification ?? "-"),
-          view_url: typeof data.view_url === "string" ? data.view_url : null,
-          ai_result: data.ai_result ?? null,
-          validation: data.validation ?? null,
-        });
-      } catch (err: unknown) {
-        if (axios.isAxiosError(err) && err.response?.status === 401) {
-          logout();
-          navigate("/login");
-          return;
-        }
-        const message =
-          axios.isAxiosError(err) && typeof err.response?.data === "object" && err.response?.data
-            ? (err.response.data as any).message
-            : null;
-        setErrorMsg(typeof message === "string" && message.length > 0 ? message : "Gagal memuat detail citra.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
-  }, [caseId, imageId]);
+  const handleOpenModal = () => setIsModalOpen(true);
 
   const aiMetrics = useMemo(() => {
-    // Mapping: ambil metrik AI yang relevan untuk ditampilkan di card "AI Metrics"
     const ai = detail?.ai_result ?? null;
     const necrosisPercent = typeof ai?.total_necrosis_percent === "number" ? ai.total_necrosis_percent : null;
     const granulomaPercent = typeof ai?.total_granuloma_percent === "number" ? ai.total_granuloma_percent : null;
@@ -190,43 +215,21 @@ export default function PatologImageValidationPage() {
     if (!imageId) return;
     setActionMsg(null);
     try {
-      setSubmittingValidation(true);
-
-      const ai = detail?.ai_result ?? null;
-      const existing = detail?.validation ?? null;
+      setSubmitting(true);
 
       const payload = {
-        global_severity:
-          existing?.global_severity ??
-          (ai?.global_severity ?? deriveSeverityFromPercent(ai?.total_necrosis_percent ?? null)),
-        necrosis_severity:
-          existing?.necrosis_severity ?? deriveSeverityFromPercent(ai?.total_necrosis_percent ?? null),
-        granuloma_severity:
-          existing?.granuloma_severity ?? deriveSeverityFromPercent(ai?.total_granuloma_percent ?? null),
-        datia_count_level:
-          existing?.datia_count_level ?? deriveCountLevel(ai?.total_datia_count ?? null),
-        epithelioid_count_level:
-          existing?.epithelioid_count_level ?? deriveCountLevel(ai?.total_epiteloid_count ?? null),
+        global_severity: formData.necrosis_severity, // Biasanya global mengikuti tingkat necrosis
+        necrosis_severity: formData.necrosis_severity,
+        granuloma_severity: formData.granuloma_severity,
+        datia_count_level: formData.datia_count_level,
+        epithelioid_count_level: formData.epithelioid_count_level,
       } as const;
 
       await api.post(`/images/${imageId}/validate`, payload);
+      setIsModalOpen(false);
       setActionMsg("Validasi berhasil disimpan.");
+      fetchData();
 
-      if (caseId) {
-        // Refresh: ambil ulang detail citra agar UI menampilkan validasi terbaru
-        const detailRes = await api.get(`/review/cases/${caseId}/images/${imageId}`);
-        const data = (detailRes.data as any)?.data ?? {};
-        setDetail((prev) =>
-          prev
-            ? {
-                ...prev,
-                view_url: typeof data.view_url === "string" ? data.view_url : prev.view_url,
-                ai_result: data.ai_result ?? prev.ai_result,
-                validation: data.validation ?? prev.validation,
-              }
-            : prev,
-        );
-      }
     } catch (err: unknown) {
       const message =
         axios.isAxiosError(err) && typeof err.response?.data === "object" && err.response?.data
@@ -234,27 +237,37 @@ export default function PatologImageValidationPage() {
           : null;
       setActionMsg(typeof message === "string" && message.length > 0 ? message : "Gagal menyimpan validasi.");
     } finally {
-      setSubmittingValidation(false);
+      setSubmitting(false);
     }
   };
 
   const handleSendComment = async () => {
-    // Submit: POST /api/images/:id/comments
-    if (!imageId) return;
-    const content = comment.trim();
-    if (!content) return;
-    setActionMsg(null);
+    if (!imageId || !commentText.trim()) return;
     try {
       setSendingComment(true);
-      await api.post(`/images/${imageId}/comments`, { content });
-      setComment("");
-      setActionMsg("Komentar berhasil dikirim.");
-    } catch (err: unknown) {
-      const message =
-        axios.isAxiosError(err) && typeof err.response?.data === "object" && err.response?.data
-          ? (err.response.data as any).message
-          : null;
-      setActionMsg(typeof message === "string" && message.length > 0 ? message : "Gagal mengirim komentar.");
+
+      // 1. Kirim ke Backend
+      await api.post(`/images/${imageId}/comments`, { content: commentText.trim() });
+
+      // 2. LOGIKA TAMBAHAN: Tambahkan komentar secara manual ke layar (Optimistic Update)
+      const newCommentLocal = {
+        id: Date.now().toString(), // ID sementara
+        content: commentText.trim(),
+        created_at: new Date().toISOString(),
+      };
+
+      // Update state comments secara manual agar langsung muncul di box riwayat
+      setComments((prev) => [newCommentLocal, ...prev]);
+
+      // 3. Reset form
+      setCommentText("");
+      setActionMsg("Komentar terkirim.");
+
+      // 4. Tetap panggil fetchData untuk sinkronisasi jika backend sudah siap
+      fetchData();
+
+    } catch (err) {
+      setActionMsg("Gagal kirim komentar.");
     } finally {
       setSendingComment(false);
     }
@@ -268,7 +281,7 @@ export default function PatologImageValidationPage() {
       setGenerating(true);
       const createRes = await api.post("/reports", {
         case_id: caseId,
-        diagnosis_summary: comment.trim().length > 0 ? comment.trim() : undefined,
+        diagnosis_summary: commentText.trim().length > 0 ? commentText.trim() : undefined,
       });
       const reportId = String((createRes.data as any)?.data?.id ?? "");
       if (!reportId) {
@@ -390,70 +403,114 @@ export default function PatologImageValidationPage() {
 
                     {/* Konten AI Metrics */}
                     <div className="p-4 space-y-2 text-sm">
+                      {/* Necrosis */}
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-slate-600">Necrosis</span>
                         <span className="font-semibold text-slate-900">
-                          {aiMetrics.necrosisPercent !== null ? `${Math.round(aiMetrics.necrosisPercent)}%` : "-"}{" "}
-                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.necrosisSeverity)}`}>{aiMetrics.necrosisSeverity}</span>
+                          {detail?.ai_result?.total_necrosis_percent !== null
+                            ? `${Math.round(detail?.ai_result?.total_necrosis_percent ?? 0)}%`
+                            : "-"}
+                          {" "}
+                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.necrosisSeverity)}`}>
+                            {aiMetrics.necrosisSeverity}
+                          </span>
                         </span>
                       </div>
+
+                      {/* Datia Langhans */}
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-slate-600">Datia Langhans</span>
                         <span className="font-semibold text-slate-900">
-                          {aiMetrics.datiaCount !== null ? `${aiMetrics.datiaCount}` : "-"}{" "}
-                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.datiaLevel)}`}>{aiMetrics.datiaLevel}</span>
+                          {detail?.ai_result?.total_datia_count !== null
+                            ? detail?.ai_result?.total_datia_count
+                            : "-"}
+                          {" "}
+                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.datiaLevel)}`}>
+                            {aiMetrics.datiaLevel}
+                          </span>
                         </span>
                       </div>
+
+                      {/* Granuloma */}
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-slate-600">Granuloma</span>
                         <span className="font-semibold text-slate-900">
-                          {aiMetrics.granulomaPercent !== null ? `${Math.round(aiMetrics.granulomaPercent)}%` : "-"}{" "}
-                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.granulomaSeverity)}`}>{aiMetrics.granulomaSeverity}</span>
+                          {detail?.ai_result?.total_granuloma_percent !== null
+                            ? `${Math.round(detail?.ai_result?.total_granuloma_percent ?? 0)}%`
+                            : "-"}
+                          {" "}
+                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.granulomaSeverity)}`}>
+                            {aiMetrics.granulomaSeverity}
+                          </span>
                         </span>
                       </div>
+
+                      {/* Epithelioid */}
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-slate-600">Epithelioid</span>
                         <span className="font-semibold text-slate-900">
-                          {aiMetrics.epiteloidCount !== null ? `${aiMetrics.epiteloidCount}` : "-"}{" "}
-                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.epiteloidLevel)}`}>{aiMetrics.epiteloidLevel}</span>
+                          {detail?.ai_result?.total_epiteloid_count !== null
+                            ? detail?.ai_result?.total_epiteloid_count
+                            : "-"}
+                          {" "}
+                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.epiteloidLevel)}`}>
+                            {aiMetrics.epiteloidLevel}
+                          </span>
                         </span>
                       </div>
                     </div>
 
-                    {/* Tombol: Submit validasi */}
+                    {/* Tombol: Membuka Modal Validasi Dokter */}
                     <button
                       type="button"
-                      disabled={submittingValidation}
-                      onClick={() => void handleValidate()}
-                      className="w-full bg-[#0055CC] text-white py-2.5 font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleOpenModal}
+                      className="w-full bg-[#0055CC] text-white py-2.5 font-semibold hover:bg-blue-700 transition-colors"
                     >
-                      {submittingValidation ? "Menyimpan..." : "Validasi"}
+                      Validasi
                     </button>
 
-                    {/* Form: Diagnosis Comment */}
+                    {/* Form: Diagnosis Comment & Riwayat */}
                     <div className="p-4 border-t border-slate-200">
-                      <p className="text-xs font-bold text-slate-700 mb-2">DIAGNOSIS COMMENT</p>
+                      <p className="text-xs font-bold text-slate-700 mb-2 uppercase">Diagnosis Comment</p>
+
+                      {/* --- INI ADALAH BAGIAN RIWAYAT KOMENTAR --- */}
+                      <div className="mb-3 max-h-[150px] overflow-y-auto space-y-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        {comments.length === 0 ? (
+                          <p className="text-[10px] text-slate-400 italic text-center py-2">Belum ada riwayat komentar.</p>
+                        ) : (
+                          comments.map((c) => (
+                            <div key={c.id} className="p-2 bg-white rounded border border-slate-200 shadow-sm text-xs">
+                              <p className="text-slate-800 break-words">{c.content}</p>
+                              <p className="text-[9px] text-slate-400 mt-1 text-right">
+                                {new Date(c.created_at).toLocaleString('id-ID')}
+                              </p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      {/* ------------------------------------------ */}
+
+                      {/* Bagian Input (Kode Anda yang tadi) */}
                       <div className="border border-slate-200 rounded-lg overflow-hidden">
                         <textarea
-                          value={comment}
-                          onChange={(e) => setComment(e.target.value)}
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
                           placeholder="Add comment..."
-                          className="w-full min-h-[90px] p-3 text-sm outline-none resize-none"
+                          className="w-full min-h-[80px] p-3 text-sm outline-none resize-none"
                         />
-                        <div className="p-3 bg-slate-50 flex justify-end">
+                        <div className="p-2 bg-slate-50 flex justify-end">
                           <button
                             type="button"
-                            disabled={sendingComment || comment.trim().length === 0}
+                            disabled={sendingComment || commentText.trim().length === 0}
                             onClick={() => void handleSendComment()}
-                            className="px-4 py-2 rounded bg-slate-300 text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="px-4 py-1.5 rounded bg-[#0055CC] text-white text-xs font-semibold hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed transition-all shadow-sm"
                           >
                             {sendingComment ? "Mengirim..." : "Kirim"}
                           </button>
                         </div>
                       </div>
-                      {actionMsg ? (
-                        <div className="mt-3 text-xs text-slate-600">{actionMsg}</div>
-                      ) : null}
+
+                      {actionMsg && <p className="mt-2 text-[10px] text-slate-500 italic">{actionMsg}</p>}
                     </div>
                   </div>
                 </div>
@@ -481,6 +538,112 @@ export default function PatologImageValidationPage() {
           {generating ? "Generating..." : "Generate PDF"}
         </button>
       </div>
+
+      {/* --- MODAL VALIDASI (G-FORM STYLE) --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+              <h2 className="font-bold text-lg text-slate-800">Validasi Hasil Diagnosis</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X /></button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-8">
+              {/* Question: Necrosis */}
+              <section>
+                <p className="font-semibold text-slate-700 mb-3">Tingkat Necrosis:</p>
+                <div className="flex flex-wrap gap-4">
+                  {severityOptions.map(opt => (
+                    <label key={opt} className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="radio"
+                        name="necrosis"
+                        checked={formData.necrosis_severity === opt}
+                        onChange={() => setFormData({ ...formData, necrosis_severity: opt })}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="text-sm group-hover:text-blue-600 transition-colors">{formatLabel(opt)}</span>
+                    </label>
+                  ))}
+                </div>
+              </section>
+
+              {/* Question: Granuloma */}
+              <section>
+                <p className="font-semibold text-slate-700 mb-3">Tingkat Granuloma:</p>
+                <div className="flex flex-wrap gap-4">
+                  {severityOptions.map(opt => (
+                    <label key={opt} className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="radio"
+                        name="granuloma"
+                        checked={formData.granuloma_severity === opt}
+                        onChange={() => setFormData({ ...formData, granuloma_severity: opt })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm group-hover:text-blue-600">{formatLabel(opt)}</span>
+                    </label>
+                  ))}
+                </div>
+              </section>
+
+              {/* Question: Datia */}
+              <section>
+                <p className="font-semibold text-slate-700 mb-3">Jumlah Datia Langhans per HPF:</p>
+                <div className="flex flex-wrap gap-4">
+                  {countOptions.map(opt => (
+                    <label key={opt} className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="radio"
+                        name="datia"
+                        checked={formData.datia_count_level === opt}
+                        onChange={() => setFormData({ ...formData, datia_count_level: opt })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm group-hover:text-blue-600">{formatLabel(opt)}</span>
+                    </label>
+                  ))}
+                </div>
+              </section>
+
+              {/* Question: Epithelioid */}
+              <section>
+                <p className="font-semibold text-slate-700 mb-3">Jumlah Epithelioid per HPF:</p>
+                <div className="flex flex-wrap gap-4">
+                  {countOptions.map(opt => (
+                    <label key={opt} className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="radio"
+                        name="epithelioid"
+                        checked={formData.epithelioid_count_level === opt}
+                        onChange={() => setFormData({ ...formData, epithelioid_count_level: opt })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm group-hover:text-blue-600">{formatLabel(opt)}</span>
+                    </label>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            <div className="p-4 border-t bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-2 text-slate-600 font-semibold hover:bg-slate-200 rounded"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleValidate}
+                disabled={submitting}
+                className="px-10 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 transition-shadow shadow-md"
+              >
+                {submitting ? "Menyimpan..." : "Simpan Validasi"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
