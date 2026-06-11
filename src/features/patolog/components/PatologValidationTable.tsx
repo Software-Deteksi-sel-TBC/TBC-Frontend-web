@@ -1,7 +1,8 @@
-import React, { useMemo, useState, FC, Dispatch, SetStateAction } from "react";
+import { useMemo, useState } from "react";
 import { Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ValidationRecord } from "../types/patolog.types";
+import type { Dispatch, SetStateAction } from "react";
 
 type Props = {
     data: ValidationRecord[];

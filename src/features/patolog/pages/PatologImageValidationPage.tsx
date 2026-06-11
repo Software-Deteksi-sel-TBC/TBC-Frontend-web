@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FileText, ZoomIn, X, ZoomOut, CheckCircle2 } from "lucide-react";
 import PatologTopNav from "../components/PatologTopNav";
 import { api } from "../../../services/api";
-import { useAuth } from "../../../context/AuthContext";
+
 
 // Enum values mengikuti Prisma enum di backend
 type SeverityLevel =
@@ -109,7 +109,6 @@ const deriveCountLevel = (n: number | null | undefined): HpfCountLevel => {
 export default function PatologImageValidationPage() {
   const { caseId, imageId } = useParams<{ caseId: string; imageId: string }>();
   const navigate = useNavigate();
-  const { logout } = useAuth();
 
   // State: loading, error halaman, comment
   const [loading, setLoading] = useState(true);
