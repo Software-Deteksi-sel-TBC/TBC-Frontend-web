@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
-import { FileText, ZoomIn, X, ZoomOut } from "lucide-react";
+import { FileText, ZoomIn, X, ZoomOut, CheckCircle2 } from "lucide-react";
 import PatologTopNav from "../components/PatologTopNav";
 import { api } from "../../../services/api";
 import { useAuth } from "../../../context/AuthContext";
@@ -54,10 +54,30 @@ const countOptions: HpfCountLevel[] = ["TIDAK_ADA", "JARANG", "CUKUP_BANYAK", "S
 // --- Helpers ---
 const formatLabel = (v: string) => v.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 const severityBadge = (label: string) => {
-  const key = label.toLowerCase();
-  if (key.includes("sangat tinggi") || key.includes("tinggi")) return "text-red-600";
-  if (key.includes("sedang") || key.includes("cukup")) return "text-orange-600";
-  return "text-green-600";
+  const key = label.toUpperCase();
+  // --- KATEGORI MERAH (Parah / Sangat Banyak) ---
+  if (key.includes("SANGAT_TINGGI") || key.includes("SANGAT_BANYAK")) {
+    return "text-red-600";
+  }
+
+  // --- KATEGORI ORANYE (Tinggi) ---
+  if (key.includes("TINGGI")) {
+    return "text-orange-600";
+  }
+
+  // --- KATEGORI KUNING/AMBER (Sedang / Cukup Banyak) ---
+  if (key.includes("SEDANG") || key.includes("CUKUP_BANYAK")) {
+    return "text-amber-500";
+  }
+
+  // --- KATEGORI HIJAU MUDA (Rendah / Jarang) ---
+  if ((key.includes("RENDAH") && !key.includes("SANGAT")) || key.includes("JARANG")) {
+    return "text-lime-600";
+  }
+
+  // --- KATEGORI HIJAU PEKAT (Sangat Rendah / Tidak Ada) ---
+  // Ini mencakup "SANGAT_RENDAH" dan "TIDAK_ADA"
+  return "text-emerald-600";
 };
 
 // Helpers: format enum agar tampil cantik di UI
@@ -141,6 +161,11 @@ export default function PatologImageValidationPage() {
         api.get(`/review/cases/${caseId}/images/${imageId}`),
       ]);
 
+      const imgData = detailRes.data?.data ?? {};
+      setDetail(imgData);
+
+      setComments(imgData.comments ?? imgData.comment_thread ?? []);
+
       const kasus = caseRes.data?.data ?? {};
       const patient = kasus.patient ?? {};
       setPatientInfo({
@@ -150,9 +175,6 @@ export default function PatologImageValidationPage() {
         sex: patient.sex,
       });
 
-      const imgData = detailRes.data?.data ?? {};
-      setDetail(imgData);
-
       // Prefill form modal
       setFormData({
         necrosis_severity: imgData.validation?.necrosis_severity ?? deriveSeverityFromPercent(imgData.ai_result?.total_necrosis_percent),
@@ -161,21 +183,9 @@ export default function PatologImageValidationPage() {
         epithelioid_count_level: imgData.validation?.epithelioid_count_level ?? deriveCountLevel(imgData.ai_result?.total_epiteloid_count),
       });
 
-      // 2. Ambil komentar secara TERPISAH (Agar jika 404, halaman tidak crash)
-      try {
-        const commentRes = await api.get(`/images/${imageId}/comments`);
-        setComments(commentRes.data?.data ?? []);
-      } catch (e) {
-        console.warn("Endpoint komentar gagal (404/Not Found).");
-      }
-
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 401) {
-        logout();
-        navigate("/login");
-        return;
-      }
-      setErrorMsg("Gagal memuat data utama dari server.");
+      console.error("Fetch Error:", err);
+      setErrorMsg("Gagal memuat data. Periksa apakah ID di URL sudah benar.");
     } finally {
       setLoading(false);
     }
@@ -387,6 +397,35 @@ export default function PatologImageValidationPage() {
                         <ZoomIn size={18} />
                       </button>
                     </div>
+                    <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                      {/* Tombol Kembali di Sisi Kiri */}
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/patolog/validate/${caseId}`)}
+                        className="px-8 py-2.5 bg-white border border-[#0055CC] text-[#0055CC] rounded-md font-bold hover:bg-blue-50 transition-all flex items-center gap-2"
+                      >
+                        Kembali
+                      </button>
+
+                      {/* Tombol Generate PDF di Sisi Kanan */}
+                      <div className="flex flex-col items-end gap-1">
+                        <button
+                          type="button"
+                          disabled={generating || !detail?.validation}
+                          onClick={() => void handleGeneratePdf()}
+                          className="px-8 py-2.5 bg-[#0055CC] text-white rounded-md font-bold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md flex items-center gap-2"
+                        >
+                          {generating ? "Generating..." : "Generate PDF"}
+                        </button>
+
+                        {/* Helper text agar dokter tahu kenapa tombol mati */}
+                        {!detail?.validation && (
+                          <span className="text-[10px] text-slate-400 italic font-medium">
+                            *Lakukan validasi untuk generate PDF
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -402,72 +441,122 @@ export default function PatologImageValidationPage() {
                     </div>
 
                     {/* Konten AI Metrics */}
-                    <div className="p-4 space-y-2 text-sm">
-                      {/* Necrosis */}
+                    <div className="p-4 space-y-3 text-sm">
+                      {/* Baris Necrosis */}
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-slate-600">Necrosis</span>
-                        <span className="font-semibold text-slate-900">
-                          {detail?.ai_result?.total_necrosis_percent !== null
-                            ? `${Math.round(detail?.ai_result?.total_necrosis_percent ?? 0)}%`
-                            : "-"}
-                          {" "}
-                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.necrosisSeverity)}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900">
+                            {Math.round(detail?.ai_result?.total_necrosis_percent ?? 0)}%
+                          </span>
+                          <span className={`font-black ${severityBadge(aiMetrics.necrosisSeverity)}`}>
                             {aiMetrics.necrosisSeverity}
                           </span>
-                        </span>
+                        </div>
                       </div>
 
-                      {/* Datia Langhans */}
+                      {/* Baris Datia Langhans */}
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-slate-600">Datia Langhans</span>
-                        <span className="font-semibold text-slate-900">
-                          {detail?.ai_result?.total_datia_count !== null
-                            ? detail?.ai_result?.total_datia_count
-                            : "-"}
-                          {" "}
-                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.datiaLevel)}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900">
+                            {/* Jika backend hanya kirim jumlah sel, kita tampilkan jumlah tersebut sebagai 'persentase beban sel' */}
+                            {detail?.ai_result?.total_datia_count ?? 0}%
+                          </span>
+                          <span className={`font-black ${severityBadge(aiMetrics.datiaLevel)}`}>
                             {aiMetrics.datiaLevel}
                           </span>
-                        </span>
+                        </div>
                       </div>
 
-                      {/* Granuloma */}
+                      {/* Baris Granuloma */}
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-slate-600">Granuloma</span>
-                        <span className="font-semibold text-slate-900">
-                          {detail?.ai_result?.total_granuloma_percent !== null
-                            ? `${Math.round(detail?.ai_result?.total_granuloma_percent ?? 0)}%`
-                            : "-"}
-                          {" "}
-                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.granulomaSeverity)}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900">
+                            {Math.round(detail?.ai_result?.total_granuloma_percent ?? 0)}%
+                          </span>
+                          <span className={`font-black ${severityBadge(aiMetrics.granulomaSeverity)}`}>
                             {aiMetrics.granulomaSeverity}
                           </span>
-                        </span>
+                        </div>
                       </div>
 
-                      {/* Epithelioid */}
+                      {/* Baris Epithelioid */}
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-slate-600">Epithelioid</span>
-                        <span className="font-semibold text-slate-900">
-                          {detail?.ai_result?.total_epiteloid_count !== null
-                            ? detail?.ai_result?.total_epiteloid_count
-                            : "-"}
-                          {" "}
-                          <span className={`ml-1 font-semibold ${severityBadge(aiMetrics.epiteloidLevel)}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900">
+                            {detail?.ai_result?.total_epiteloid_count ?? 0}%
+                          </span>
+                          <span className={`font-black ${severityBadge(aiMetrics.epiteloidLevel)}`}>
                             {aiMetrics.epiteloidLevel}
                           </span>
-                        </span>
+                        </div>
                       </div>
                     </div>
 
+                    {/* --- SECTION BARU: VALIDATION RESULTS --- */}
+                    <div className="border-t border-slate-200 bg-blue-50/30">
+                      <div className="p-4 border-b border-slate-200 flex items-center gap-2">
+                        <div className="w-7 h-7 rounded bg-green-50 border border-green-100 flex items-center justify-center text-green-600">
+                          <CheckCircle2 size={16} />
+                        </div>
+                        <p className="font-semibold text-slate-800">Hasil Validasi</p>
+                      </div>
+
+                      <div className="p-4 space-y-3 text-sm">
+                        {!detail?.validation ? (
+                          /* State jika dokter belum melakukan validasi */
+                          <div className="py-2 text-center text-slate-400 italic text-[11px]">
+                            Belum ada hasil validasi manual.
+                          </div>
+                        ) : (
+                          /* Daftar Hasil Validasi Patolog */
+                          <>
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-slate-600">Necrosis</span>
+                              <span className={`font-black ${severityBadge(detail.validation.necrosis_severity)}`}>
+                                {formatLabel(detail.validation.necrosis_severity)}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-slate-600">Datia Langhans</span>
+                              <span className={`font-black ${severityBadge(detail.validation.datia_count_level)}`}>
+                                {formatLabel(detail.validation.datia_count_level)}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-slate-600">Granuloma</span>
+                              <span className={`font-black ${severityBadge(detail.validation.granuloma_severity)}`}>
+                                {formatLabel(detail.validation.granuloma_severity)}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-slate-600">Epithelioid</span>
+                              <span className={`font-black ${severityBadge(detail.validation.epithelioid_count_level)}`}>
+                                {formatLabel(detail.validation.epithelioid_count_level)}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {/* --- END OF SECTION --- */}
+
                     {/* Tombol: Membuka Modal Validasi Dokter */}
-                    <button
-                      type="button"
-                      onClick={handleOpenModal}
-                      className="w-full bg-[#0055CC] text-white py-2.5 font-semibold hover:bg-blue-700 transition-colors"
-                    >
-                      Validasi
-                    </button>
+                    <div className="px-6 py-4">
+                      <button
+                        type="button"
+                        onClick={handleOpenModal}
+                        className="w-full bg-[#0055CC] text-white rounded-lg py-2.5 font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        Validasi
+                      </button>
+                    </div>
 
                     {/* Form: Diagnosis Comment & Riwayat */}
                     <div className="p-4 border-t border-slate-200">
@@ -519,25 +608,6 @@ export default function PatologImageValidationPage() {
           )}
         </div>
       </main>
-
-      {/* Floating Actions: navigasi & generate report */}
-      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate(`/patolog/validate/${caseId ?? ""}`)}
-          className="bg-white border border-[#0055CC] text-[#0055CC] px-6 py-2 rounded shadow-sm hover:bg-blue-50 transition-colors"
-        >
-          Kembali
-        </button>
-        <button
-          type="button"
-          disabled={generating || !caseId}
-          onClick={() => void handleGeneratePdf()}
-          className="bg-[#0055CC] text-white px-6 py-2 rounded shadow-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {generating ? "Generating..." : "Generate PDF"}
-        </button>
-      </div>
 
       {/* --- MODAL VALIDASI (G-FORM STYLE) --- */}
       {isModalOpen && (

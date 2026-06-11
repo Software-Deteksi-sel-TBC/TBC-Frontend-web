@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState, FC, Dispatch, SetStateAction } from "react";
 import { Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ValidationRecord } from "../types/patolog.types";
@@ -6,7 +6,7 @@ import type { ValidationRecord } from "../types/patolog.types";
 type Props = {
     data: ValidationRecord[];
     query: string;
-    onQueryChange: (value: string) => void;
+    onQueryChange: Dispatch<SetStateAction<string>>;
 };
 
 export default function PendingValidationTable({ data, query, onQueryChange }: Props) {
