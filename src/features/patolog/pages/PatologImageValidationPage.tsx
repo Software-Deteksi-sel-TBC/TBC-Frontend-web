@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { FileText, ZoomIn, X, ZoomOut, CheckCircle2 } from "lucide-react";
@@ -20,8 +20,9 @@ type HpfCountLevel = "TIDAK_ADA" | "JARANG" | "CUKUP_BANYAK" | "SANGAT_BANYAK";
 type Comment = {
   id: string;
   content: string;
-  created_at: string;
-  user?: { name: string };
+  submitted_at: string;
+  user?: { name?: string };
+  commentator?: { name?: string };
 };
 
 // Shape data detail citra dari endpoint: GET /api/review/cases/:caseId/images/:imageId
@@ -44,6 +45,7 @@ type ReviewImageDetail = {
     datia_count_level: HpfCountLevel;
     epithelioid_count_level: HpfCountLevel;
     validation_comment?: string | null;
+    submitted_at?: string;
   } | null;
 };
 
@@ -106,6 +108,40 @@ const deriveCountLevel = (n: number | null | undefined): HpfCountLevel => {
   return "SANGAT_BANYAK";
 };
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const normalizeComments = (input: unknown): Comment[] => {
+  const arr = Array.isArray(input) ? (input as any[]) : [];
+  const mapped = arr
+    .map((c) => {
+      const submitted = typeof c?.submitted_at === "string" ? c.submitted_at : typeof c?.created_at === "string" ? c.created_at : "";
+      return {
+        id: String(c?.id ?? ""),
+        content: String(c?.content ?? ""),
+        submitted_at: submitted,
+        user: typeof c?.user === "object" && c.user ? { name: typeof c.user.name === "string" ? c.user.name : undefined } : undefined,
+        commentator:
+          typeof c?.commentator === "object" && c.commentator
+            ? { name: typeof c.commentator.name === "string" ? c.commentator.name : undefined }
+            : undefined,
+      } as Comment;
+    })
+    .filter((c) => c.id.length > 0);
+
+  return mapped.sort((a, b) => (b.submitted_at || "").localeCompare(a.submitted_at || ""));
+};
+
 export default function PatologImageValidationPage() {
   const { caseId, imageId } = useParams<{ caseId: string; imageId: string }>();
   const navigate = useNavigate();
@@ -126,10 +162,21 @@ export default function PatologImageValidationPage() {
 
   // State: UI interactions
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const imageViewportRef = useRef<HTMLDivElement | null>(null);
+  const panSessionRef = useRef<{
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    startPanX: number;
+    startPanY: number;
+  } | null>(null);
   const [commentText, setCommentText] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [validatedByName, setValidatedByName] = useState<string | null>(null);
 
   // States for Processing
   const [submitting, setSubmitting] = useState(false);
@@ -141,12 +188,41 @@ export default function PatologImageValidationPage() {
     granuloma_severity: "SANGAT_RENDAH" as SeverityLevel,
     datia_count_level: "TIDAK_ADA" as HpfCountLevel,
     epithelioid_count_level: "TIDAK_ADA" as HpfCountLevel,
+    validation_comment: "",
   });
 
 
   // Derived: label singkat umur & jenis kelamin
   const patientYearsLabel = typeof patientInfo.age === "number" ? `${patientInfo.age}Y` : "-";
   const patientGenderLabel = patientInfo.sex === "LAKI_LAKI" ? "M" : patientInfo.sex === "PEREMPUAN" ? "F" : "-";
+
+  const clampPan = (nextX: number, nextY: number) => {
+    const el = imageViewportRef.current;
+    if (!el) return { x: nextX, y: nextY };
+    const rect = el.getBoundingClientRect();
+    const maxX = Math.max(0, ((zoom - 1) * rect.width) / 2);
+    const maxY = Math.max(0, ((zoom - 1) * rect.height) / 2);
+    return {
+      x: Math.min(maxX, Math.max(-maxX, nextX)),
+      y: Math.min(maxY, Math.max(-maxY, nextY)),
+    };
+  };
+
+  useEffect(() => {
+    if (zoom <= 1) {
+      setPan({ x: 0, y: 0 });
+      setIsPanning(false);
+      panSessionRef.current = null;
+      return;
+    }
+    setPan((p) => clampPan(p.x, p.y));
+  }, [zoom]);
+
+  useEffect(() => {
+    setPan({ x: 0, y: 0 });
+    setIsPanning(false);
+    panSessionRef.current = null;
+  }, [detail?.view_url]);
 
   const fetchData = async () => {
     if (!caseId || !imageId) return;
@@ -163,7 +239,7 @@ export default function PatologImageValidationPage() {
       const imgData = detailRes.data?.data ?? {};
       setDetail(imgData);
 
-      setComments(imgData.comments ?? imgData.comment_thread ?? []);
+      setComments(normalizeComments(imgData.comments ?? imgData.comment_thread ?? []));
 
       const kasus = caseRes.data?.data ?? {};
       const patient = kasus.patient ?? {};
@@ -180,7 +256,22 @@ export default function PatologImageValidationPage() {
         granuloma_severity: imgData.validation?.granuloma_severity ?? deriveSeverityFromPercent(imgData.ai_result?.total_granuloma_percent),
         datia_count_level: imgData.validation?.datia_count_level ?? deriveCountLevel(imgData.ai_result?.total_datia_count),
         epithelioid_count_level: imgData.validation?.epithelioid_count_level ?? deriveCountLevel(imgData.ai_result?.total_epiteloid_count),
+        validation_comment: typeof imgData.validation?.validation_comment === "string" ? imgData.validation.validation_comment : "",
       });
+
+      if (imgData.validation) {
+        try {
+          const listRes = await api.get(`/review/cases/${caseId}/images`);
+          const items = Array.isArray((listRes.data as any)?.data) ? ((listRes.data as any).data as any[]) : [];
+          const found = items.find((it) => String(it?.id ?? "") === String(imageId));
+          const name = found?.validated_by;
+          setValidatedByName(typeof name === "string" && name.length > 0 ? name : null);
+        } catch {
+          setValidatedByName(null);
+        }
+      } else {
+        setValidatedByName(null);
+      }
 
     } catch (err) {
       console.error("Fetch Error:", err);
@@ -232,6 +323,7 @@ export default function PatologImageValidationPage() {
         granuloma_severity: formData.granuloma_severity,
         datia_count_level: formData.datia_count_level,
         epithelioid_count_level: formData.epithelioid_count_level,
+        validation_comment: formData.validation_comment.trim().length > 0 ? formData.validation_comment.trim() : undefined,
       } as const;
 
       await api.post(`/images/${imageId}/validate`, payload);
@@ -262,7 +354,7 @@ export default function PatologImageValidationPage() {
       const newCommentLocal = {
         id: Date.now().toString(), // ID sementara
         content: commentText.trim(),
-        created_at: new Date().toISOString(),
+        submitted_at: new Date().toISOString(),
       };
 
       // Update state comments secara manual agar langsung muncul di box riwayat
@@ -362,14 +454,59 @@ export default function PatologImageValidationPage() {
                 <div className="lg:col-span-2">
                   <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                     <div className="bg-slate-100">
-                      <div className="relative w-full aspect-[4/3] flex items-center justify-center overflow-hidden">
+                      <div
+                        ref={imageViewportRef}
+                        className={`relative w-full aspect-[4/3] flex items-center justify-center overflow-hidden ${zoom > 1 ? "cursor-grab" : ""} ${isPanning ? "cursor-grabbing" : ""}`}
+                        style={{ touchAction: zoom > 1 ? "none" : "auto" }}
+                        onPointerDown={(e) => {
+                          if (zoom <= 1) return;
+                          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                          panSessionRef.current = {
+                            pointerId: e.pointerId,
+                            startClientX: e.clientX,
+                            startClientY: e.clientY,
+                            startPanX: pan.x,
+                            startPanY: pan.y,
+                          };
+                          setIsPanning(true);
+                        }}
+                        onPointerMove={(e) => {
+                          const session = panSessionRef.current;
+                          if (!session || session.pointerId !== e.pointerId) return;
+                          const dx = e.clientX - session.startClientX;
+                          const dy = e.clientY - session.startClientY;
+                          const next = clampPan(session.startPanX + dx, session.startPanY + dy);
+                          setPan(next);
+                        }}
+                        onPointerUp={(e) => {
+                          const session = panSessionRef.current;
+                          if (!session || session.pointerId !== e.pointerId) return;
+                          panSessionRef.current = null;
+                          setIsPanning(false);
+                          try {
+                            (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+                          } catch {}
+                        }}
+                        onPointerCancel={(e) => {
+                          const session = panSessionRef.current;
+                          if (!session || session.pointerId !== e.pointerId) return;
+                          panSessionRef.current = null;
+                          setIsPanning(false);
+                        }}
+                      >
                         {detail?.view_url ? (
-                          <img
-                            src={detail.view_url}
-                            alt={detail.original_filename}
-                            className="max-w-full max-h-full object-contain"
-                            style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}
-                          />
+                          <div
+                            className="w-full h-full flex items-center justify-center"
+                            style={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0)` }}
+                          >
+                            <img
+                              src={detail.view_url}
+                              alt={detail.original_filename}
+                              className="max-w-full max-h-full object-contain select-none"
+                              draggable={false}
+                              style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}
+                            />
+                          </div>
                         ) : (
                           <div className="text-sm text-slate-500 px-4 text-center">
                             Citra belum tersedia untuk ditampilkan.
@@ -557,6 +694,33 @@ export default function PatologImageValidationPage() {
                       </button>
                     </div>
 
+                    {/* Initial Pathologist Report */}
+                    <div className="border-t border-slate-200">
+                      <div className="p-4">
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" checked readOnly className="accent-[#0055CC]" />
+                          <p className="text-sm font-semibold text-slate-800">Initial Pathologist Report</p>
+                        </div>
+
+                        {!detail?.validation ? (
+                          <p className="mt-3 text-xs text-slate-500 italic">Belum ada report awal karena citra belum divalidasi.</p>
+                        ) : (
+                          <div className="mt-4 space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase">Reviewing Pathologist</p>
+                                <p className="text-sm font-semibold text-slate-800">{validatedByName ?? "Patolog"}</p>
+                              </div>
+                              <div className="sm:text-right">
+                                <p className="text-[10px] font-bold text-slate-500 uppercase">Submission Date</p>
+                                <p className="text-sm text-slate-700">{formatDateTime(detail.validation.submitted_at)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     {/* Form: Diagnosis Comment & Riwayat */}
                     <div className="p-4 border-t border-slate-200">
                       <p className="text-xs font-bold text-slate-700 mb-2 uppercase">Diagnosis Comment</p>
@@ -568,10 +732,13 @@ export default function PatologImageValidationPage() {
                         ) : (
                           comments.map((c) => (
                             <div key={c.id} className="p-2 bg-white rounded border border-slate-200 shadow-sm text-xs">
-                              <p className="text-slate-800 break-words">{c.content}</p>
-                              <p className="text-[9px] text-slate-400 mt-1 text-right">
-                                {new Date(c.created_at).toLocaleString('id-ID')}
-                              </p>
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[10px] font-semibold text-slate-600">
+                                  {c.user?.name ?? c.commentator?.name ?? "Patolog"}
+                                </p>
+                                <p className="text-[9px] text-slate-400">{formatDateTime(c.submitted_at)}</p>
+                              </div>
+                              <p className="mt-1 text-slate-800 break-words whitespace-pre-wrap">{c.content}</p>
                             </div>
                           ))
                         )}
@@ -692,6 +859,17 @@ export default function PatologImageValidationPage() {
                     </label>
                   ))}
                 </div>
+              </section>
+
+              {/* Question: Validation Comment (Initial Pathologist Report) */}
+              <section>
+                <p className="font-semibold text-slate-700 mb-3">Catatan Validasi (Initial Pathologist Report):</p>
+                <textarea
+                  value={formData.validation_comment}
+                  onChange={(e) => setFormData({ ...formData, validation_comment: e.target.value })}
+                  placeholder="Tulis ringkasan temuan / diagnosis awal..."
+                  className="w-full min-h-[110px] border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
               </section>
             </div>
 
