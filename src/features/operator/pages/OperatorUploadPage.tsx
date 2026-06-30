@@ -240,15 +240,15 @@ export default function OperatorUploadPage() {
 
       <main className="flex-1 max-w-[1400px] w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 mb-20">
         <div className="lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-start gap-4 mb-6">
             <div className="flex items-center gap-2 text-[#0a3d62]">
               <div className="p-2 bg-blue-50 rounded-lg">
                 <Upload size={24} />
               </div>
               <h2 className="text-2xl font-bold">Upload Citra</h2>
             </div>
-            <div className="text-right text-xs">
-              <p className="text-blue-700 font-bold">NIP: {patientNoInduk}</p>
+            <div className="min-w-0 max-w-[240px] text-right text-xs">
+              <p className="text-blue-700 font-bold break-all whitespace-normal">NIP: {patientNoInduk}</p>
               <p className="text-slate-500">
                 Patient: <span className="font-bold text-slate-700">{patientName}</span>
               </p>
@@ -455,3 +455,4 @@ function StatusPill({ status, text }: { status: string; text: string }) {
     </div>
   );
 }
+
