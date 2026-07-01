@@ -421,8 +421,10 @@ export default function OperatorUploadPage() {
             type="button"
             disabled={!canSubmit || submitting}
             onClick={() => void handleSubmit()}
-            className={`px-8 py-2 rounded-lg font-bold text-white transition-all ${
-              !canSubmit || submitting ? "bg-slate-300 cursor-not-allowed" : "bg-[#969696] hover:bg-slate-500"
+            className={`px-8 py-2 rounded-lg border border-[#0055CC] font-bold transition-all ${
+              !canSubmit || submitting
+                ? "border-slate-300 bg-slate-300 text-white cursor-not-allowed"
+                : "bg-white text-[#0055CC] hover:bg-[#0055CC] hover:text-white"
             }`}
           >
             {submitting ? "Submitting..." : "Submit Analysis"}

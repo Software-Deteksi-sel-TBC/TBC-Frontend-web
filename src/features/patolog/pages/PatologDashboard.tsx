@@ -18,6 +18,9 @@ export default function PatologDashboardPage() {
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
 
+    const isResolvedRecord = (record: ValidationRecord) =>
+        record.progress.total > 0 && record.progress.current >= record.progress.total;
+
     const toRelative = (iso: string) => {
         const date = new Date(iso);
         const diffMs = Date.now() - date.getTime();
@@ -34,16 +37,10 @@ export default function PatologDashboardPage() {
         setLoadError(null);
         try {
             setLoading(true);
-            const [pendingRes, resolvedRes] = await Promise.all([
-                api.get("/review/queue", { params: { page: "1", limit: "200" } }),
-                api.get("/review/resolved", { params: { page: "1", limit: "1" } }),
-            ]);
+            const pendingRes = await api.get("/review/queue", { params: { page: "1", limit: "200" } });
 
             const pendingBody = pendingRes.data as any;
-            const resolvedBody = resolvedRes.data as any;
             const pendingItems = Array.isArray(pendingBody?.data) ? (pendingBody.data as any[]) : [];
-            const pendingMetaTotal = Number(pendingBody?.meta?.total ?? pendingItems.length ?? 0);
-            const resolvedMetaTotal = Number(resolvedBody?.meta?.total ?? 0);
 
             const mapped: ValidationRecord[] = pendingItems.map((c) => {
                 const id = String(c.id ?? "");
@@ -61,8 +58,8 @@ export default function PatologDashboardPage() {
             });
 
             setPending(mapped);
-            setPendingTotal(pendingMetaTotal);
-            setResolvedTotal(resolvedMetaTotal);
+            setPendingTotal(mapped.filter((record) => !isResolvedRecord(record)).length);
+            setResolvedTotal(mapped.filter(isResolvedRecord).length);
         } catch (err: unknown) {
             if (axios.isAxiosError(err) && err.response?.status === 401) {
                 logout();
@@ -95,12 +92,11 @@ export default function PatologDashboardPage() {
 
     return (
         <div className="min-h-screen bg-[#EEF6FF]">
-            <PatologTopNav /> {/* Gunakan nav yang sama */}
+            <PatologTopNav />
 
             <main className="max-w-[1260px] mx-auto px-4 py-6 md:px-6 md:py-8">
                 <h1 className="text-2xl md:text-3xl font-bold text-[#0a3d62] mb-6 md:mb-8">Pending Validation Queue</h1>
 
-                {/* Stats Cards */}
                 <div className="flex flex-col sm:flex-row flex-wrap gap-4 md:gap-6 mb-6 md:mb-10">
                     <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 w-full sm:w-60">
                         <div className="p-3 bg-blue-50 text-[#0055CC] rounded-lg"><ClipboardList size={24} /></div>
@@ -118,7 +114,6 @@ export default function PatologDashboardPage() {
                     </div>
                 </div>
 
-                {/* The Table Component */}
                 {loading ? (
                     <div className="text-sm text-slate-500 py-10">Loading...</div>
                 ) : loadError ? (
@@ -132,3 +127,5 @@ export default function PatologDashboardPage() {
         </div>
     );
 }
+
+
