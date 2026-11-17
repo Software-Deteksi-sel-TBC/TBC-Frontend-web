@@ -21,7 +21,7 @@ Frontend ini melayani dua peran utama:
   - membuka detail kasus dan daftar citra di dalamnya
   - memvalidasi hasil AI per citra
   - menambahkan komentar diagnosis
-  - generate PDF report setelah validasi tersedia
+  - generate report setelah validasi tersedia (label UI masih menyebut PDF; artefak backend berupa JSON)
 
 Selain itu ada alur autentikasi tambahan:
 
@@ -48,11 +48,11 @@ Entry point ada di `src/main.tsx`.
 
 - React dirender dalam `StrictMode`
 - seluruh aplikasi dibungkus `AuthProvider`
-- `src/App.tsx` hanya merender router utama
+- `src/app/App.tsx` hanya merender router utama
 
 ### 2. Routing dan proteksi akses
 
-Routing didefinisikan di `src/routes/index.tsx`.
+Routing didefinisikan di `src/app/router/index.tsx`.
 
 Halaman utama yang tersedia:
 
@@ -77,7 +77,7 @@ Proteksi route dilakukan oleh komponen `RequireAuth`:
 
 ### 3. Manajemen autentikasi
 
-Autentikasi dikelola oleh `src/context/AuthContext.tsx`.
+Autentikasi dikelola oleh `src/features/authentication/state/AuthContext.tsx`.
 
 Fungsi utamanya:
 
@@ -90,7 +90,7 @@ Data yang disimpan:
 - `token`
 - `auth_user`
 
-API client ada di `src/services/api.ts`:
+API client ada di `src/shared/api/api.ts`:
 
 - `baseURL` default: `VITE_API_URL` atau `/api`
 - request interceptor otomatis menambahkan header `Authorization: Bearer <token>`
@@ -101,12 +101,12 @@ API client ada di `src/services/api.ts`:
 
 File utama:
 
-- `src/pages/auth/Login.tsx`
-- `src/pages/auth/ResetPasswordEmail.tsx`
-- `src/pages/auth/ResetPassword.tsx`
-- `src/pages/auth/ResetSuccess.tsx`
-- `src/pages/auth/UpdateCredentials.tsx`
-- `src/features/auth/services/auth.service.ts`
+- `src/features/authentication/pages/Login.tsx`
+- `src/features/authentication/pages/ResetPasswordEmail.tsx`
+- `src/features/authentication/pages/ResetPassword.tsx`
+- `src/features/authentication/pages/ResetSuccess.tsx`
+- `src/features/authentication/pages/UpdateCredentials.tsx`
+- `src/features/authentication/api/auth.service.ts`
 
 Flow login:
 
@@ -129,12 +129,12 @@ Flow first login update:
 
 File utama:
 
-- `src/features/operator/pages/OperatorDashboardPage.tsx`
-- `src/features/operator/pages/OperatorPatientFormPage.tsx`
-- `src/features/operator/pages/OperatorUploadPage.tsx`
-- `src/features/operator/components/OperatorTopNav.tsx`
-- `src/features/operator/components/PatientHistoryTable.tsx`
-- `src/features/operator/components/OperatorEmptyState.tsx`
+- `src/features/case-intake/pages/OperatorDashboardPage.tsx`
+- `src/features/patient-management/pages/OperatorPatientFormPage.tsx`
+- `src/features/image-upload/pages/OperatorUploadPage.tsx`
+- `src/features/authentication/components/OperatorTopNav.tsx`
+- `src/features/case-intake/components/PatientHistoryTable.tsx`
+- `src/features/case-intake/components/OperatorEmptyState.tsx`
 
 Fitur dashboard operator:
 
@@ -183,11 +183,11 @@ Status QC gambar yang dipakai di frontend:
 
 File utama:
 
-- `src/features/patolog/pages/PatologDashboard.tsx`
-- `src/features/patolog/pages/PatologCaseDetailsPage.tsx`
-- `src/features/patolog/pages/PatologImageValidationPage.tsx`
-- `src/features/patolog/components/PatologTopNav.tsx`
-- `src/features/patolog/components/PatologValidationTable.tsx`
+- `src/features/pathology-review/pages/PatologDashboard.tsx`
+- `src/features/pathology-review/pages/PatologCaseDetailsPage.tsx`
+- `src/features/pathology-review/pages/PatologImageValidationPage.tsx`
+- `src/features/authentication/components/PatologTopNav.tsx`
+- `src/features/pathology-review/components/PatologValidationTable.tsx`
 
 Fitur dashboard patolog:
 
@@ -212,9 +212,11 @@ Fitur validasi citra:
   - epithelioid
 - menyimpan validasi manual lewat `POST /images/:imageId/validate`
 - mengirim komentar lewat `POST /images/:imageId/comments`
-- generate report PDF lewat:
+- generate report melalui helper `src/features/reporting/api/report.service.ts`:
   - `POST /reports`
   - `GET /reports/:reportId`
+
+Kedua helper mengembalikan respons Axios tanpa mengubah envelope. GET mengembalikan metadata dan `download_url`; URL tersebut membuka artefak JSON yang dibuat backend. Label PDF yang ada pada UI tetap dipertahankan oleh refactor ini.
 
 Enum yang dipakai di UI validasi:
 
@@ -236,36 +238,37 @@ Struktur source yang aktif saat ini:
 
 ```text
 src/
-  assets/
-  components/
-    ui/
-  context/
+  app/
+    App.tsx
+    App.css
+    router/
   features/
-    auth/
-    operator/
-    patolog/
-  hooks/
-  layouts/
-  pages/
-    auth/
-  routes/
-  services/
-  App.tsx
+    authentication/
+    patient-management/
+    case-intake/
+    image-upload/
+    pathology-review/
+    reporting/
+  shared/
+    api/
+    assets/
+    ui/
   index.css
   main.tsx
 ```
 
 Penjelasan singkat:
 
-- `components/ui` berisi komponen dasar seperti `Input` dan `Button`
-- `context` berisi state autentikasi global
-- `features/auth` berisi service untuk endpoint auth
-- `features/operator` berisi seluruh halaman dan komponen role operator
-- `features/patolog` berisi seluruh halaman dan komponen role patolog
-- `layouts` berisi `AuthLayout` untuk halaman login dan reset credential
-- `pages/auth` berisi halaman autentikasi
-- `routes` berisi konfigurasi router aplikasi
-- `services` berisi instance Axios
+- `app` menyusun aplikasi, router, dan guard; `main.tsx` tetap menjadi bootstrap.
+- `authentication` memiliki halaman auth, service, context, layout, dan navigasi sesuai peran.
+- `patient-management` memiliki form pasien dan alur pembuatan pasien lalu kasus.
+- `case-intake` memiliki dashboard operator, tabel kasus, types, dan mock data yang dipertahankan.
+- `image-upload` memiliki upload, konfirmasi, dan submit; wrapper legacy tetap tidak dirutekan.
+- `pathology-review` memiliki antrean serta detail kasus/citra, validasi, komentar, dan konsensus.
+- `reporting` menyediakan dua helper HTTP report; pemicu dan state UI tetap di halaman review.
+- `shared` memiliki UI dasar, aset, Axios client, dan DTO lintas fitur (`CaseImageSummary`). `PatientRecord` tetap dimiliki case-intake.
+
+Konsumen fitur menggunakan public `index.ts`. Empat fitur workflow boleh bergantung pada authentication; pathology-review juga boleh bergantung pada reporting. Tidak ada dependency fitur lain yang diizinkan. Shared tidak mengimpor fitur atau app, dan fitur tidak mengimpor app. Refactor ini mempertahankan URL, redirect, query, JSX/CSS, request payload, dan storage behavior.
 
 ## Konfigurasi Environment
 
@@ -308,19 +311,21 @@ Beberapa hal penting yang terlihat dari kode saat ini:
 
 - frontend masih sangat bergantung pada kontrak endpoint backend
 - beberapa file mock data masih ada di repository, tetapi flow utama sudah menggunakan API nyata
-- `src/hooks/useAuth.ts` ada tetapi kosong dan tidak dipakai
-- `src/App.css` masih berisi sisa template Vite dan tidak dipakai aktif
+- file kosong `src/hooks/useAuth.ts` yang tidak dipakai dihapus; hook aktif tetap diekspor dari authentication
+- `src/app/App.css` masih berisi sisa template Vite dan tidak dipakai aktif
 - ada dokumen audit internal di `docs/AUDIT_LOGIN.md` untuk evaluasi auth/login
 
 ## File Penting
 
 Jika ingin mulai membaca kode, file paling penting adalah:
 
-- `src/routes/index.tsx`
-- `src/context/AuthContext.tsx`
-- `src/services/api.ts`
-- `src/features/auth/services/auth.service.ts`
-- `src/features/operator/pages/OperatorDashboardPage.tsx`
-- `src/features/operator/pages/OperatorUploadPage.tsx`
-- `src/features/patolog/pages/PatologDashboard.tsx`
-- `src/features/patolog/pages/PatologImageValidationPage.tsx`
+- `src/app/router/index.tsx`
+- `src/features/authentication/state/AuthContext.tsx`
+- `src/shared/api/api.ts`
+- `src/features/authentication/api/auth.service.ts`
+- `src/features/case-intake/pages/OperatorDashboardPage.tsx`
+- `src/features/image-upload/pages/OperatorUploadPage.tsx`
+- `src/features/pathology-review/pages/PatologDashboard.tsx`
+- `src/features/pathology-review/pages/PatologImageValidationPage.tsx`
+
+Baseline lint frontend terdiri dari 51 error dan 6 warning. Gate refactor membandingkan identitas temuan setelah normalisasi path; jumlah yang sama saja belum cukup. Bukti build, lint, dan replay UI disimpan di laporan control worktree, terpisah dari source aplikasi.

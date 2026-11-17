@@ -1,0 +1,126 @@
+import type { ReactElement } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  Login,
+  ResetPasswordEmail,
+  ResetPassword,
+  ResetSuccess,
+  UpdateCredentials,
+  useAuth,
+} from "../../features/authentication";
+// import UploadCitra from "../../features/image-upload/pages/UploadCitra";
+import { OperatorDashboardPage } from "../../features/case-intake";
+import { OperatorUploadPage } from "../../features/image-upload";
+import { OperatorPatientFormPage } from "../../features/patient-management";
+import {
+  PatologDashboardPage,
+  PatologCaseDetailsPage,
+  PatologImageValidationPage,
+} from "../../features/pathology-review";
+
+function RequireAuth({ children, allowedRoles }: { children: ReactElement; allowedRoles?: string[] }) {
+  const { user } = useAuth();
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+  if (!token) return <Navigate to="/login" replace />;
+  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!allowedRoles && user?.role && user.role !== "OPERATOR_LAB") {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+export default function AppRoutes() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/reset-password"
+          element={
+            <RequireAuth allowedRoles={["OPERATOR_LAB", "DOKTER_PATOLOGI", "ADMIN_AI"]}>
+              <ResetPassword />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/reset-success"
+          element={
+            <RequireAuth allowedRoles={["OPERATOR_LAB", "DOKTER_PATOLOGI", "ADMIN_AI"]}>
+              <ResetSuccess />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/update-credentials"
+          element={
+            <RequireAuth allowedRoles={["OPERATOR_LAB", "DOKTER_PATOLOGI", "ADMIN_AI"]}>
+              <UpdateCredentials />
+            </RequireAuth>
+          }
+        />
+        <Route path="/reset-password-email" element={<ResetPasswordEmail />} />
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth allowedRoles={["OPERATOR_LAB"]}>
+              <OperatorDashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/operator/dashboard"
+          element={
+            <RequireAuth allowedRoles={["OPERATOR_LAB"]}>
+              <OperatorDashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/operator/patient-form"
+          element={
+            <RequireAuth allowedRoles={["OPERATOR_LAB"]}>
+              <OperatorPatientFormPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/operator/upload"
+          element={
+            <RequireAuth allowedRoles={["OPERATOR_LAB"]}>
+              <OperatorUploadPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/patolog/dashboard"
+          element={
+            <RequireAuth allowedRoles={["DOKTER_PATOLOGI"]}>
+              <PatologDashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/patolog/validate/:id"
+          element={
+            <RequireAuth allowedRoles={["DOKTER_PATOLOGI"]}>
+              <PatologCaseDetailsPage />
+            </RequireAuth>
+          }
+        />
+
+        <Route 
+          path="/patolog/validate/:caseId/image/:imageId"
+          element={
+            <RequireAuth allowedRoles={["DOKTER_PATOLOGI"]}>
+              <PatologImageValidationPage />
+            </RequireAuth>
+          }
+        />
+        {/* <Route path="/upload" element={<UploadCitra />} /> */}
+      </Routes>
+    </BrowserRouter>
+  );
+}
